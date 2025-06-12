@@ -11,8 +11,6 @@
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8fafc;
-            color: #333;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -21,9 +19,7 @@
         #appContainer {
             width: 100%;
             max-width: 700px;
-            background: #fff;
             border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
             padding: 30px 25px 40px;
             position: relative;
             z-index: 1;
@@ -34,8 +30,6 @@
         h1 {
             font-weight: 700;
             margin-bottom: 0;
-            color: #1f2937;
-            text-align: center;
             user-select: none;
         }
         #searchAndButtonContainer {
@@ -52,15 +46,12 @@
             width: 100%;
             padding: 12px 50px 12px 20px;
             font-size: 1.1rem;
-            border: 2px solid #e0e7ff;
             border-radius: 8px;
             outline-offset: 2px;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.1);
         }
         #workitemSearch:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 8px 3px rgba(99, 102, 241, 0.4);
+            outline: 3px solid;
         }
         #searchSpinner {
             position: absolute;
@@ -72,29 +63,11 @@
             display: none;
             user-select: none;
         }
-        /* Spinner animation */
-        #searchSpinner::after {
-            content: "";
-            display: block;
-            width: 20px;
-            height: 20px;
-            margin: 2px;
-            border-radius: 50%;
-            border: 3px solid #6366f1;
-            border-color: #6366f1 transparent #6366f1 transparent;
-            animation: spin 1.2s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg);}
-            100% { transform: rotate(360deg);}
-        }
         #searchResults {
-            border: 1px solid #e0e7ff;
             border-top: none;
             border-radius: 0 0 8px 8px;
             max-height: 280px;
             overflow-y: auto;
-            box-shadow: 0 8px 16px rgba(99,102,241,0.15);
             background: white;
             position: absolute;
             top: 100%;
@@ -104,83 +77,73 @@
             display: none;
             font-size: 0.95rem;
         }
-        .autocomplete-item, .modal-item {
+        .autocomplete-item {
             padding: 12px 20px;
             cursor: pointer;
             transition: background-color 0.3s ease;
-            border-bottom: 1px solid #f0f3ff;
+            border-bottom-style: solid;
+            border-bottom-width: 1px;
             display: flex;
             flex-direction: column;
             user-select: none;
             background: white;
             border-radius: 0;
         }
-        .autocomplete-item:last-child, .modal-item:last-child {
+        .autocomplete-item:last-child {
             border-bottom: none;
         }
-        .autocomplete-item:hover, .modal-item:hover {
-            background-color: #eef2ff;
+        .autocomplete-item:hover {
+            /* subtle background change on hover - no color */
+            background-color: #f0f0f0;
         }
-        .autocomplete-item-name, .modal-item-name {
+        .autocomplete-item-name {
             font-weight: 600;
-            color: #4f46e5;
             margin-bottom: 4px;
         }
         .highlight {
-            background-color: #fde68a;
             border-radius: 3px;
             padding: 0 3px;
         }
-        .autocomplete-item-details, .modal-item-details {
+        .autocomplete-item-details {
             font-size: 0.85rem;
-            color: #6b7280;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
         }
-        .autocomplete-item-details span, .modal-item-details span {
+        .autocomplete-item-details span {
             white-space: nowrap;
             user-select: text;
         }
         .no-results {
             padding: 15px 20px;
-            color: #9ca3af;
             font-style: italic;
             text-align: center;
             user-select: none;
         }
         #showAllBtn {
-            background-color: #6366f1;
-            border: none;
             border-radius: 8px;
-            color: white;
             font-weight: 600;
             padding: 12px 24px;
             cursor: pointer;
             user-select: none;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: transform 0.2s ease;
             white-space: nowrap;
             flex-shrink: 0;
             min-width: 180px;
         }
         #showAllBtn:hover {
-            background-color: #4f46e5;
             transform: scale(1.05);
         }
-
-        /* Container for inputs showing selected workitem details */
+        /* Outside detail inputs */
         #selectedDetails {
             margin-top: 8px;
-            background: #f9fafb;
             padding: 20px 25px;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.1);
             user-select: none;
         }
         #selectedDetails h3 {
             margin-top: 0;
             margin-bottom: 15px;
-            color: #1e293b;
             font-weight: 700;
             letter-spacing: 0.03em;
         }
@@ -189,39 +152,29 @@
         #selectedDetails textarea {
             width: 100%;
             background: white;
-            border: 1.5px solid #d1d5db;
             border-radius: 6px;
             padding: 12px 15px;
             margin-bottom: 15px;
-            color: #374151;
             font-size: 1rem;
             resize: vertical;
             user-select: text;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
             transition: border-color 0.2s ease;
         }
         #selectedDetails input[readonly],
         #selectedDetails textarea[readonly] {
-            background-color: #f3f4f6;
             cursor: default;
-        }
-        #selectedDetails input::placeholder,
-        #selectedDetails textarea::placeholder {
-            color: #9ca3af;
         }
         #selectedDetails textarea {
             min-height: 80px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        /* Modal styling */
+        /* Modal styling with table */
         #modalOverlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(5px);
             display: none;
             justify-content: center;
@@ -231,11 +184,10 @@
         }
         #modalContent {
             background: white;
-            max-width: 700px;
+            max-width: 900px;
             width: 100%;
             max-height: 80vh;
             border-radius: 12px;
-            box-shadow: 0 14px 32px rgba(0,0,0,0.15);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -243,8 +195,6 @@
         }
         #modalHeader {
             padding: 18px 24px;
-            background: #4f46e5;
-            color: white;
             font-weight: 700;
             font-size: 1.3rem;
             user-select: none;
@@ -256,30 +206,50 @@
             right: 14px;
             background: transparent;
             border: none;
-            color: white;
             font-size: 1.6rem;
             cursor: pointer;
             user-select: none;
-            transition: color 0.3s ease;
+            transition: opacity 0.3s ease;
         }
         #modalCloseBtn:hover {
-            color: #dbeafe;
+            opacity: 0.6;
         }
         #modalBody {
-            padding: 15px 20px 20px;
+            padding: 15px 24px 20px;
             overflow-y: auto;
             flex-grow: 1;
         }
-        @media (max-width: 480px) {
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+        thead {
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom-style: solid;
+            border-bottom-width: 1px;
+            text-align: left;
+        }
+        tr:hover {
+            cursor: pointer;
+            background-color: #f0f0f0;
+        }
+        th {
+            font-weight: 700;
+        }
+        @media (max-width: 768px) {
             #appContainer {
+                max-width: 100%;
                 padding: 20px 15px 30px;
             }
-            #showAllBtn {
-                min-width: 120px;
-                flex-shrink: 1;
+            #searchAndButtonContainer {
+                flex-direction: column;
+                gap: 12px;
             }
             #modalContent {
-                max-width: 90vw;
+                max-height: 90vh;
             }
         }
     </style>
@@ -288,7 +258,6 @@
 
 <div id="appContainer" aria-live="polite">
     <h1>Workitem Search</h1>
-    
     <div id="searchAndButtonContainer">
         <div id="searchContainer">
             <input type="text" id="workitemSearch" placeholder="Search for workitems..." autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="searchResults" aria-activedescendant="" />
@@ -297,7 +266,6 @@
         </div>
         <button id="showAllBtn" type="button" aria-haspopup="dialog" aria-label="Show all matching workitems">Show All</button>
     </div>
-
     <div id="selectedDetails" aria-live="polite" aria-atomic="true">
         <h3>Selected Workitem Details</h3>
         <input type="hidden" id="workitemIdInput" />
@@ -308,16 +276,28 @@
     </div>
 </div>
 
-<!-- Modal for showing all matching workitems -->
+<!-- Modal showing table of matching workitems -->
 <div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
     <div id="modalContent">
         <header id="modalHeader">
             <span id="modalTitle">Matching Workitems</span>
             <button id="modalCloseBtn" aria-label="Close modal">&times;</button>
         </header>
-        <main id="modalBody" tabindex="0">
-            <!-- List of items will be appended here -->
-        </main>
+        <section id="modalBody" tabindex="0">
+            <table id="workitemsTable" role="grid" aria-describedby="modalTitle">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows inserted here dynamically -->
+                </tbody>
+            </table>
+        </section>
     </div>
 </div>
 
@@ -329,17 +309,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const spinner = document.getElementById('searchSpinner');
     const showAllBtn = document.getElementById('showAllBtn');
 
-    // Thymeleaf input fields
+    // Modal elements and table tbody
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const workitemsTableBody = document.querySelector('#workitemsTable tbody');
+
+    // Outside Thymeleaf detail inputs
     const workitemIdInput = document.getElementById('workitemIdInput');
     const workitemNameInput = document.getElementById('workitemNameInput');
     const workitemEmailInput = document.getElementById('workitemEmailInput');
     const workitemDescriptionInput = document.getElementById('workitemDescriptionInput');
     const workitemVersionInput = document.getElementById('workitemVersionInput');
-
-    // Modal elements
-    const modalOverlay = document.getElementById('modalOverlay');
-    const modalBody = document.getElementById('modalBody');
-    const modalCloseBtn = document.getElementById('modalCloseBtn');
 
     let debounceTimer;
     let lastQuery = '';
@@ -380,11 +360,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .catch(error => {
                             console.error('Error searching workitems:', error);
-                            resultsContainer.innerHTML = `
+                            resultsContainer.innerHTML = \`
                                 <div class="no-results">
                                     <div>Error searching workitems. Please try again.</div>
                                 </div>
-                            `;
+                            \`;
                             resultsContainer.style.display = 'block';
                             spinner.style.display = 'none';
                         });
@@ -397,13 +377,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const query = searchInput.value.trim();
         if (allWorkitems.length > 0) {
             const filteredWorkitems = filterWorkitemsByName(allWorkitems, query);
-            showModalWithItems(filteredWorkitems, query);
+            openModalWithItems(filteredWorkitems, query);
         } else {
             fetchAllWorkitems()
                 .then(workitems => {
                     allWorkitems = workitems;
                     const filteredWorkitems = filterWorkitemsByName(workitems, query);
-                    showModalWithItems(filteredWorkitems, query);
+                    openModalWithItems(filteredWorkitems, query);
                 })
                 .catch(error => {
                     console.error('Error fetching all workitems:', error);
@@ -418,57 +398,62 @@ document.addEventListener('DOMContentLoaded', function() {
             closeModal();
         }
     });
-
     document.addEventListener('keydown', function(e) {
         if (e.key === "Escape" && modalOverlay.style.display === "flex") {
             closeModal();
         }
     });
 
-    function showModalWithItems(workitems, query) {
-        modalBody.innerHTML = '';
+    function openModalWithItems(workitems, query) {
+        // Clear table body
+        workitemsTableBody.innerHTML = '';
 
         if (workitems.length === 0) {
-            modalBody.innerHTML = `<div class="no-results">No workitems found${query ? \` for "\${query}"\` : ''}.</div>`;
+            workitemsTableBody.innerHTML = \`
+                <tr><td colspan="4" class="no-results">No workitems found\${query ? \` for "\${query}"\` : ''}.</td></tr>
+            \`;
         } else {
             if (query) {
                 workitems = sortWorkitemsByNameRelevance(workitems, query);
             }
-            workitems.forEach(workitem => {
-                const div = document.createElement('div');
-                div.className = 'modal-item';
+            for (const workitem of workitems) {
+                const row = document.createElement('tr');
+                row.tabIndex = 0; // To allow keyboard navigation
+                row.innerHTML = \`
+                    <td>\${highlightMatch(escapeHtml(workitem.name || 'Unnamed Workitem'), query)}</td>
+                    <td>\${escapeHtml(workitem.description || 'No Description')}</td>
+                    <td>\${escapeHtml(workitem.email || 'No Email')}</td>
+                    <td>\${escapeHtml(workitem.version || 'N/A')}</td>
+                \`;
 
-                const name = workitem.name || 'Unnamed Workitem';
-                const email = workitem.email || 'No Email';
-                const description = workitem.description || 'No Description';
-                const version = workitem.version || 'N/A';
-
-                const highlightedName = query ? highlightMatch(name, query) : name;
-
-                div.innerHTML = `
-                    <div class="modal-item-name">${highlightedName}</div>
-                    <div class="modal-item-details">
-                        <span>Email: ${email}</span>
-                        <span>Description: ${description}</span>
-                        <span>Version: ${version}</span>
-                    </div>
-                `;
-
-                div.addEventListener('click', () => {
-                    selectWorkitem(workitem);
+                row.addEventListener('click', () => {
+                    fillDetailInputs(workitem);
                     closeModal();
-                    searchInput.value = name;
+                    searchInput.value = workitem.name || '';
                     resultsContainer.style.display = 'none';
                     searchInput.focus();
                 });
-
-                modalBody.appendChild(div);
-            });
+                row.addEventListener('keypress', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        row.click();
+                    }
+                });
+                workitemsTableBody.appendChild(row);
+            }
         }
 
         modalOverlay.style.display = 'flex';
         modalOverlay.focus();
         resultsContainer.style.display = 'none';
+    }
+
+    function fillDetailInputs(workitem) {
+        if (workitemIdInput) workitemIdInput.value = workitem.id || '';
+        if (workitemNameInput) workitemNameInput.value = workitem.name || '';
+        if (workitemEmailInput) workitemEmailInput.value = workitem.email || '';
+        if (workitemDescriptionInput) workitemDescriptionInput.value = workitem.description || '';
+        if (workitemVersionInput) workitemVersionInput.value = workitem.version || '';
     }
 
     function closeModal() {
@@ -525,11 +510,11 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsContainer.innerHTML = '';
 
         if (workitems.length === 0) {
-            resultsContainer.innerHTML = `
+            resultsContainer.innerHTML = \`
                 <div class="no-results">
-                    <div>No workitems found${query ? \` for "\${query}"\` : ''}</div>
+                    <div>No workitems found\${query ? \` for "\${query}"\` : ''}</div>
                 </div>
-            `;
+            \`;
             resultsContainer.style.display = 'block';
             return;
         }
@@ -549,14 +534,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const highlightedName = query ? highlightMatch(name, query) : name;
 
-            div.innerHTML = `
-                <div class="autocomplete-item-name">${highlightedName}</div>
+            div.innerHTML = \`
+                <div class="autocomplete-item-name">\${highlightedName}</div>
                 <div class="autocomplete-item-details">
-                    <span>Email: ${email}</span>
-                    <span>Description: ${description}</span>
-                    <span>Version: ${version}</span>
+                    <span>Email: \${email}</span>
+                    <span>Description: \${description}</span>
+                    <span>Version: \${version}</span>
                 </div>
-            `;
+            \`;
 
             div.addEventListener('click', () => {
                 selectWorkitem(workitem);
@@ -624,6 +609,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return text.replace(regex, '<span class="highlight">$1</span>');
     }
 
+    function escapeHtml(text) {
+        // simple html escape to avoid injection in our innerHTML usage
+        return text.replace(/[&<>"']/g, function(m) {
+            return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m];
+        });
+    }
+
     function escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
     }
@@ -635,7 +627,6 @@ document.addEventListener('DOMContentLoaded', function() {
             resultsContainer.style.display = 'none';
         }
     });
-
 });
 </script>
 
