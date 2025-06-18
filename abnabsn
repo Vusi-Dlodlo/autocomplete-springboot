@@ -1,634 +1,431 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Workitem Search</title>
-    <style>
-        /* Reset some defaults */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        #appContainer {
-            width: 100%;
-            max-width: 700px;
-            border-radius: 10px;
-            padding: 30px 25px 40px;
-            position: relative;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-        h1 {
-            font-weight: 700;
-            margin-bottom: 0;
-            user-select: none;
-        }
-        #searchAndButtonContainer {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            width: 100%;
-        }
-        #searchContainer {
-            position: relative;
-            flex-grow: 1;
-        }
-        #workitemSearch {
-            width: 100%;
-            padding: 12px 50px 12px 20px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            outline-offset: 2px;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        #workitemSearch:focus {
-            outline: 3px solid;
-        }
-        #searchSpinner {
-            position: absolute;
-            top: 50%;
-            right: 18px;
-            transform: translateY(-50%);
-            width: 24px;
-            height: 24px;
-            display: none;
-            user-select: none;
-        }
-        #searchResults {
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            max-height: 280px;
-            overflow-y: auto;
-            background: white;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            display: none;
-            font-size: 0.95rem;
-        }
-        .autocomplete-item {
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            border-bottom-style: solid;
-            border-bottom-width: 1px;
-            display: flex;
-            flex-direction: column;
-            user-select: none;
-            background: white;
-            border-radius: 0;
-        }
-        .autocomplete-item:last-child {
-            border-bottom: none;
-        }
-        .autocomplete-item:hover {
-            /* subtle background change on hover - no color */
-            background-color: #f0f0f0;
-        }
-        .autocomplete-item-name {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .highlight {
-            border-radius: 3px;
-            padding: 0 3px;
-        }
-        .autocomplete-item-details {
-            font-size: 0.85rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .autocomplete-item-details span {
-            white-space: nowrap;
-            user-select: text;
-        }
-        .no-results {
-            padding: 15px 20px;
-            font-style: italic;
-            text-align: center;
-            user-select: none;
-        }
-        #showAllBtn {
-            border-radius: 8px;
-            font-weight: 600;
-            padding: 12px 24px;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.2s ease;
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: 180px;
-        }
-        #showAllBtn:hover {
-            transform: scale(1.05);
-        }
-        /* Outside detail inputs */
-        #selectedDetails {
-            margin-top: 8px;
-            padding: 20px 25px;
-            border-radius: 10px;
-            user-select: none;
-        }
-        #selectedDetails h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-        }
-        #selectedDetails input[type="text"],
-        #selectedDetails input[type="email"],
-        #selectedDetails textarea {
-            width: 100%;
-            background: white;
-            border-radius: 6px;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            font-size: 1rem;
-            resize: vertical;
-            user-select: text;
-            transition: border-color 0.2s ease;
-        }
-        #selectedDetails input[readonly],
-        #selectedDetails textarea[readonly] {
-            cursor: default;
-        }
-        #selectedDetails textarea {
-            min-height: 80px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        /* Modal styling with table */
-        #modalOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            backdrop-filter: blur(5px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            padding: 20px;
-        }
-        #modalContent {
-            background: white;
-            max-width: 900px;
-            width: 100%;
-            max-height: 80vh;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
-        #modalHeader {
-            padding: 18px 24px;
-            font-weight: 700;
-            font-size: 1.3rem;
-            user-select: none;
-            flex-shrink: 0;
-        }
-        #modalCloseBtn {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            background: transparent;
-            border: none;
-            font-size: 1.6rem;
-            cursor: pointer;
-            user-select: none;
-            transition: opacity 0.3s ease;
-        }
-        #modalCloseBtn:hover {
-            opacity: 0.6;
-        }
-        #modalBody {
-            padding: 15px 24px 20px;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 0.95rem;
-        }
-        thead {
-        }
-        th, td {
-            padding: 12px 15px;
-            border-bottom-style: solid;
-            border-bottom-width: 1px;
-            text-align: left;
-        }
-        tr:hover {
-            cursor: pointer;
-            background-color: #f0f0f0;
-        }
-        th {
-            font-weight: 700;
-        }
-        @media (max-width: 768px) {
-            #appContainer {
-                max-width: 100%;
-                padding: 20px 15px 30px;
-            }
-            #searchAndButtonContainer {
-                flex-direction: column;
-                gap: 12px;
-            }
-            #modalContent {
-                max-height: 90vh;
-            }
-        }
-    </style>
-</head>
-<body>
-
-<div id="appContainer" aria-live="polite">
-    <h1>Workitem Search</h1>
-    <div id="searchAndButtonContainer">
-        <div id="searchContainer">
-            <input type="text" id="workitemSearch" placeholder="Search for workitems..." autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="searchResults" aria-activedescendant="" />
-            <span id="searchSpinner" aria-label="Loading spinner"></span>
-            <div id="searchResults" role="listbox" aria-live="polite" aria-atomic="true"></div>
+        <div class="relative">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search for items..." 
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+            <button 
+                id="searchButton" 
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+                Search
+            </button>
         </div>
-        <button id="showAllBtn" type="button" aria-haspopup="dialog" aria-label="Show all matching workitems">Show All</button>
-    </div>
-    <div id="selectedDetails" aria-live="polite" aria-atomic="true">
-        <h3>Selected Workitem Details</h3>
-        <input type="hidden" id="workitemIdInput" />
-        <input type="text" id="workitemNameInput" placeholder="Workitem Name" readonly aria-label="Workitem Name" />
-        <input type="email" id="workitemEmailInput" placeholder="Workitem Email" readonly aria-label="Workitem Email" />
-        <textarea id="workitemDescriptionInput" placeholder="Workitem Description" readonly aria-label="Workitem Description"></textarea>
-        <input type="text" id="workitemVersionInput" placeholder="Workitem Version" readonly aria-label="Workitem Version" />
     </div>
 </div>
 
-<!-- Modal showing table of matching workitems -->
-<div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
-    <div id="modalContent">
-        <header id="modalHeader">
-            <span id="modalTitle">Matching Workitems</span>
-            <button id="modalCloseBtn" aria-label="Close modal">&times;</button>
-        </header>
-        <section id="modalBody" tabindex="0">
-            <table id="workitemsTable" role="grid" aria-describedby="modalTitle">
-                <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Description</th>
-                        <th scope="col">Owner</th>
-                        <th scope="col">Version</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rows inserted here dynamically -->
-                </tbody>
-            </table>
-        </section>
+<!-- Modal Overlay -->
+<div id="modalOverlay" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <!-- Modal Content -->
+    <div id="modalContent" class="modal-content bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 overflow-hidden">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold text-white">Search Results</h3>
+            <button id="closeModal" class="text-white hover:text-gray-200 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="py-20 flex justify-center items-center">
+            <div class="spinner w-12 h-12 border-4 border-gray-200 rounded-full"></div>
+        </div>
+        
+        <!-- Results Table -->
+        <div id="resultsContainer" class="p-6 hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr class="bg-gray-100 border-b">
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Owner</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Table rows will be inserted here dynamically using the template -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Row Template - This will be cloned for each result -->
+            <template id="rowTemplate">
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 item-name"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 item-description"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 item-owner"></td>
+                </tr>
+            </template>
+            
+            <!-- No Results Message -->
+            <div id="noResultsMessage" class="hidden py-10 text-center text-gray-500">
+                No matching items found.
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="paginationContainer" class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                <div class="flex items-center text-sm text-gray-700">
+                    <span id="paginationInfo">Showing <span id="startItem">1</span> to <span id="endItem">100</span> of <span id="totalItems">0</span> results</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prevPageBtn" class="pagination-button px-4 py-2 bg-gray-200 text-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        Previous
+                    </button>
+                    <div id="pageNumbers" class="flex space-x-1">
+                        <!-- Page number template -->
+                        <template id="pageButtonTemplate">
+                            <button class="pagination-button w-10 h-10 flex items-center justify-center rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"></button>
+                        </template>
+                        <template id="ellipsisTemplate">
+                            <span class="w-10 h-10 flex items-center justify-center text-gray-500">...</span>
+                        </template>
+                        <!-- Page numbers will be inserted here dynamically -->
+                    </div>
+                    <button id="nextPageBtn" class="pagination-button px-4 py-2 bg-gray-200 text-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // DOM elements
-    const searchInput = document.getElementById('workitemSearch');
-    const resultsContainer = document.getElementById('searchResults');
-    const spinner = document.getElementById('searchSpinner');
-    const showAllBtn = document.getElementById('showAllBtn');
-
-    // Modal elements and table tbody
-    const modalOverlay = document.getElementById('modalOverlay');
-    const modalCloseBtn = document.getElementById('modalCloseBtn');
-    const workitemsTableBody = document.querySelector('#workitemsTable tbody');
-
-    // Outside Thymeleaf detail inputs
-    const workitemIdInput = document.getElementById('workitemIdInput');
-    const workitemNameInput = document.getElementById('workitemNameInput');
-    const workitemEmailInput = document.getElementById('workitemEmailInput');
-    const workitemDescriptionInput = document.getElementById('workitemDescriptionInput');
-    const workitemVersionInput = document.getElementById('workitemVersionInput');
-
-    let debounceTimer;
-    let lastQuery = '';
-    let allWorkitems = [];
-
-    fetchAllWorkitems()
-        .then(workitems => {
-            allWorkitems = workitems;
-            console.log('Cached ' + workitems.length + ' workitems for faster searching');
-        })
-        .catch(error => {
-            console.error('Error pre-fetching workitems:', error);
-        });
-
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        lastQuery = query;
-
-        clearTimeout(debounceTimer);
-        spinner.style.display = 'block';
-
-        debounceTimer = setTimeout(() => {
-            if (query === '') {
-                resultsContainer.style.display = 'none';
-                spinner.style.display = 'none';
-            } else {
-                if (allWorkitems.length > 0) {
-                    const filteredWorkitems = filterWorkitemsByName(allWorkitems, query);
-                    displayResults(filteredWorkitems, query);
-                    resultsContainer.style.display = 'block';
-                    spinner.style.display = 'none';
-                } else {
-                    searchWorkitemsByName(query)
-                        .then(results => {
-                            displayResults(results, query);
-                            resultsContainer.style.display = 'block';
-                            spinner.style.display = 'none';
-                        })
-                        .catch(error => {
-                            console.error('Error searching workitems:', error);
-                            resultsContainer.innerHTML = \`
-                                <div class="no-results">
-                                    <div>Error searching workitems. Please try again.</div>
-                                </div>
-                            \`;
-                            resultsContainer.style.display = 'block';
-                            spinner.style.display = 'none';
-                        });
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalContent = document.getElementById('modalContent');
+        const closeModal = document.getElementById('closeModal');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const rowTemplate = document.getElementById('rowTemplate');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const prevPageBtn = document.getElementById('prevPageBtn');
+        const nextPageBtn = document.getElementById('nextPageBtn');
+        const pageNumbers = document.getElementById('pageNumbers');
+        const pageButtonTemplate = document.getElementById('pageButtonTemplate');
+        const ellipsisTemplate = document.getElementById('ellipsisTemplate');
+        const startItem = document.getElementById('startItem');
+        const endItem = document.getElementById('endItem');
+        const totalItems = document.getElementById('totalItems');
+        
+        // Pagination state
+        const state = {
+            currentPage: 1,
+            itemsPerPage: 100,
+            totalPages: 1,
+            allResults: [],
+            searchTerm: ''
+        };
+        
+        // API configuration - REPLACE THESE VALUES WITH YOUR ACTUAL API DETAILS
+        const API_CONFIG = {
+            // Replace with your actual API endpoint
+            url: 'https://api.example.com/search',
+            // Method for the API call
+            method: 'GET',
+            // Headers to include in the request
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authentication headers if needed
+                // 'Authorization': 'Bearer YOUR_API_TOKEN'
+            },
+            // Query parameter name for the search term
+            searchParam: 'query',
+            // Query parameter for pagination (if your API supports it)
+            pageParam: 'page',
+            pageSizeParam: 'pageSize',
+            // Response mapping - adjust these based on your API response structure
+            responseMapping: {
+                // The property in the response that contains the array of results
+                resultsArray: 'items',
+                // The property in the response that contains the total count (if available)
+                totalCount: 'totalCount',
+                // The properties in each result item that map to our display fields
+                nameField: 'name',
+                descriptionField: 'description',
+                ownerField: 'owner'
+            }
+        };
+        
+        // Function to fetch data from the API
+        async function fetchItemsFromAPI(searchTerm, page = 1) {
+            try {
+                // Build query parameters
+                const queryParams = new URLSearchParams();
+                queryParams.append(API_CONFIG.searchParam, searchTerm);
+                
+                // Add pagination parameters if your API supports server-side pagination
+                queryParams.append(API_CONFIG.pageParam, page);
+                queryParams.append(API_CONFIG.pageSizeParam, state.itemsPerPage);
+                
+                // Build the full URL with query parameters
+                const url = `${API_CONFIG.url}?${queryParams.toString()}`;
+                
+                // Make the API request
+                const response = await fetch(url, {
+                    method: API_CONFIG.method,
+                    headers: API_CONFIG.headers
+                });
+                
+                // Check if the request was successful
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                
+                // Parse the JSON response
+                const data = await response.json();
+                
+                // Extract the results array and total count based on the response mapping
+                const results = data[API_CONFIG.responseMapping.resultsArray] || [];
+                const totalCount = data[API_CONFIG.responseMapping.totalCount] || results.length;
+                
+                // Map the API response to our internal format
+                const mappedResults = results.map(item => ({
+                    name: item[API_CONFIG.responseMapping.nameField],
+                    description: item[API_CONFIG.responseMapping.descriptionField],
+                    owner: item[API_CONFIG.responseMapping.ownerField]
+                }));
+                
+                return {
+                    results: mappedResults,
+                    totalCount: totalCount
+                };
+            } catch (error) {
+                console.error('Error fetching data from API:', error);
+                throw error;
+            }
+        }
+        
+        function openModal() {
+            modalOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                modalOverlay.classList.add('active');
+                modalContent.classList.add('active');
+            }, 10);
+        }
+        
+        function closeModalHandler() {
+            modalOverlay.classList.remove('active');
+            modalContent.classList.remove('active');
+            setTimeout(() => {
+                modalOverlay.classList.add('hidden');
+                // Reset state
+                loadingSpinner.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
+                state.currentPage = 1;
+            }, 300);
+        }
+        
+        function updatePaginationInfo() {
+            const start = (state.currentPage - 1) * state.itemsPerPage + 1;
+            const end = Math.min(state.currentPage * state.itemsPerPage, state.allResults.length);
+            
+            startItem.textContent = start;
+            endItem.textContent = end;
+            totalItems.textContent = state.allResults.length;
+            
+            // Update pagination buttons state
+            prevPageBtn.disabled = state.currentPage === 1;
+            nextPageBtn.disabled = state.currentPage === state.totalPages;
+            
+            // Generate page number buttons
+            renderPageNumbers();
+        }
+        
+        function renderPageNumbers() {
+            pageNumbers.innerHTML = '';
+            
+            // Determine which page numbers to show
+            let startPage = Math.max(1, state.currentPage - 2);
+            let endPage = Math.min(state.totalPages, state.currentPage + 2);
+            
+            // Always show at least 5 pages if available
+            if (endPage - startPage < 4) {
+                if (startPage === 1) {
+                    endPage = Math.min(5, state.totalPages);
+                } else if (endPage === state.totalPages) {
+                    startPage = Math.max(1, state.totalPages - 4);
                 }
             }
-        }, 300);
-    });
-
-    showAllBtn.addEventListener('click', function() {
-        const query = searchInput.value.trim();
-        if (allWorkitems.length > 0) {
-            const filteredWorkitems = filterWorkitemsByName(allWorkitems, query);
-            openModalWithItems(filteredWorkitems, query);
-        } else {
-            fetchAllWorkitems()
-                .then(workitems => {
-                    allWorkitems = workitems;
-                    const filteredWorkitems = filterWorkitemsByName(workitems, query);
-                    openModalWithItems(filteredWorkitems, query);
-                })
-                .catch(error => {
-                    console.error('Error fetching all workitems:', error);
-                    alert('Error fetching workitems. Please try again.');
-                });
-        }
-    });
-
-    modalCloseBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', function(e) {
-        if (e.target === modalOverlay) {
-            closeModal();
-        }
-    });
-    document.addEventListener('keydown', function(e) {
-        if (e.key === "Escape" && modalOverlay.style.display === "flex") {
-            closeModal();
-        }
-    });
-
-    function openModalWithItems(workitems, query) {
-        // Clear table body
-        workitemsTableBody.innerHTML = '';
-
-        if (workitems.length === 0) {
-            workitemsTableBody.innerHTML = \`
-                <tr><td colspan="4" class="no-results">No workitems found\${query ? \` for "\${query}"\` : ''}.</td></tr>
-            \`;
-        } else {
-            if (query) {
-                workitems = sortWorkitemsByNameRelevance(workitems, query);
+            
+            // Add first page and ellipsis if needed
+            if (startPage > 1) {
+                addPageButton(1);
+                if (startPage > 2) {
+                    addEllipsis();
+                }
             }
-            for (const workitem of workitems) {
-                const row = document.createElement('tr');
-                row.tabIndex = 0; // To allow keyboard navigation
-                row.innerHTML = \`
-                    <td>\${highlightMatch(escapeHtml(workitem.name || 'Unnamed Workitem'), query)}</td>
-                    <td>\${escapeHtml(workitem.description || 'No Description')}</td>
-                    <td>\${escapeHtml(workitem.email || 'No Email')}</td>
-                    <td>\${escapeHtml(workitem.version || 'N/A')}</td>
-                \`;
-
-                row.addEventListener('click', () => {
-                    fillDetailInputs(workitem);
-                    closeModal();
-                    searchInput.value = workitem.name || '';
-                    resultsContainer.style.display = 'none';
-                    searchInput.focus();
-                });
-                row.addEventListener('keypress', e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        row.click();
-                    }
-                });
-                workitemsTableBody.appendChild(row);
+            
+            // Add page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                addPageButton(i);
+            }
+            
+            // Add last page and ellipsis if needed
+            if (endPage < state.totalPages) {
+                if (endPage < state.totalPages - 1) {
+                    addEllipsis();
+                }
+                addPageButton(state.totalPages);
             }
         }
-
-        modalOverlay.style.display = 'flex';
-        modalOverlay.focus();
-        resultsContainer.style.display = 'none';
-    }
-
-    function fillDetailInputs(workitem) {
-        if (workitemIdInput) workitemIdInput.value = workitem.id || '';
-        if (workitemNameInput) workitemNameInput.value = workitem.name || '';
-        if (workitemEmailInput) workitemEmailInput.value = workitem.email || '';
-        if (workitemDescriptionInput) workitemDescriptionInput.value = workitem.description || '';
-        if (workitemVersionInput) workitemVersionInput.value = workitem.version || '';
-    }
-
-    function closeModal() {
-        modalOverlay.style.display = 'none';
-    }
-
-    searchInput.addEventListener('focus', function() {
-        resultsContainer.style.display = 'none';
-    });
-
-    async function searchWorkitemsByName(query) {
-        try {
-            if (allWorkitems.length > 0) {
-                return filterWorkitemsByName(allWorkitems, query);
+        
+        function addPageButton(pageNum) {
+            const clone = pageButtonTemplate.content.cloneNode(true);
+            const button = clone.querySelector('button');
+            button.textContent = pageNum;
+            
+            if (pageNum === state.currentPage) {
+                button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                button.classList.add('bg-blue-600', 'text-white');
             }
-
-            const response = await fetch(\`/api/workitems/search?keyword=\${encodeURIComponent(query)}\`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+            
+            button.addEventListener('click', () => goToPage(pageNum));
+            pageNumbers.appendChild(button);
+        }
+        
+        function addEllipsis() {
+            const clone = ellipsisTemplate.content.cloneNode(true);
+            pageNumbers.appendChild(clone);
+        }
+        
+        function goToPage(pageNum) {
+            if (pageNum < 1 || pageNum > state.totalPages || pageNum === state.currentPage) {
+                return;
             }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error searching workitems:', error);
-            throw error;
+            
+            state.currentPage = pageNum;
+            
+            // If your API supports server-side pagination, you might want to fetch new data here
+            // For this example, we're assuming client-side pagination with all results already loaded
+            renderTableData();
+            updatePaginationInfo();
         }
-    }
-
-    function filterWorkitemsByName(workitems, query) {
-        if (!query) return workitems;
-
-        const lowerQuery = query.toLowerCase();
-
-        return workitems.filter(workitem => {
-            const workitemName = (workitem.name || '').toLowerCase();
-            return workitemName.includes(lowerQuery);
-        });
-    }
-
-    async function fetchAllWorkitems() {
-        try {
-            const response = await fetch('/api/workitems');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching all workitems:', error);
-            throw error;
-        }
-    }
-
-    function displayResults(workitems, query) {
-        resultsContainer.innerHTML = '';
-
-        if (workitems.length === 0) {
-            resultsContainer.innerHTML = \`
-                <div class="no-results">
-                    <div>No workitems found\${query ? \` for "\${query}"\` : ''}</div>
-                </div>
-            \`;
-            resultsContainer.style.display = 'block';
-            return;
-        }
-
-        if (query) {
-            workitems = sortWorkitemsByNameRelevance(workitems, query);
-        }
-
-        workitems.forEach(workitem => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-item';
-
-            const name = workitem.name || 'Unnamed Workitem';
-            const email = workitem.email || 'No Email';
-            const description = workitem.description || 'No Description';
-            const version = workitem.version || 'N/A';
-
-            const highlightedName = query ? highlightMatch(name, query) : name;
-
-            div.innerHTML = \`
-                <div class="autocomplete-item-name">\${highlightedName}</div>
-                <div class="autocomplete-item-details">
-                    <span>Email: \${email}</span>
-                    <span>Description: \${description}</span>
-                    <span>Version: \${version}</span>
-                </div>
-            \`;
-
-            div.addEventListener('click', () => {
-                selectWorkitem(workitem);
-                resultsContainer.style.display = 'none';
-                searchInput.value = name;
+        
+        function renderTableData() {
+            const startIndex = (state.currentPage - 1) * state.itemsPerPage;
+            const endIndex = Math.min(startIndex + state.itemsPerPage, state.allResults.length);
+            const currentPageData = state.allResults.slice(startIndex, endIndex);
+            
+            // Clear the table body
+            resultsTableBody.innerHTML = '';
+            
+            // Use the template to create rows
+            currentPageData.forEach(item => {
+                const clone = rowTemplate.content.cloneNode(true);
+                
+                // Find elements by their class names and set content
+                clone.querySelector('.item-name').textContent = item.name;
+                clone.querySelector('.item-description').textContent = item.description;
+                clone.querySelector('.item-owner').textContent = item.owner;
+                
+                // Append the new row to the table body
+                resultsTableBody.appendChild(clone);
             });
-
-            resultsContainer.appendChild(div);
-        });
-
-        resultsContainer.style.display = 'block';
-    }
-
-    function sortWorkitemsByNameRelevance(workitems, query) {
-        const lowerQuery = query.toLowerCase();
-
-        return workitems.sort((a, b) => {
-            const aName = (a.name || '').toLowerCase();
-            const bName = (b.name || '').toLowerCase();
-
-            const aStartsWithQuery = aName.startsWith(lowerQuery);
-            const bStartsWithQuery = bName.startsWith(lowerQuery);
-
-            if (aStartsWithQuery && !bStartsWithQuery) return -1;
-            if (!aStartsWithQuery && bStartsWithQuery) return 1;
-
-            const aContainsWordQuery = new RegExp('\\b' + escapeRegExp(lowerQuery) + '\\b').test(aName);
-            const bContainsWordQuery = new RegExp('\\b' + escapeRegExp(lowerQuery) + '\\b').test(bName);
-
-            if (aContainsWordQuery && !bContainsWordQuery) return -1;
-            if (!aContainsWordQuery && bContainsWordQuery) return 1;
-
-            const aContainsQuery = aName.includes(lowerQuery);
-            const bContainsQuery = bName.includes(lowerQuery);
-
-            if (aContainsQuery && !bContainsQuery) return -1;
-            if (!aContainsQuery && bContainsQuery) return 1;
-
-            return aName.length - bName.length;
-        });
-    }
-
-    function selectWorkitem(workitem) {
-        workitemIdInput.value = workitem.id || '';
-        workitemNameInput.value = workitem.name || '';
-        workitemEmailInput.value = workitem.email || '';
-        workitemDescriptionInput.value = workitem.description || '';
-        workitemVersionInput.value = workitem.version || '';
-
-        console.log('Selected workitem:', JSON.stringify({
-            id: workitem.id,
-            name: workitem.name,
-            email: workitem.email,
-            description: workitem.description,
-            version: workitem.version
-        }));
-    }
-
-    function highlightMatch(text, query) {
-        if (!query || !text) return text || '';
-
-        const escapedQuery = escapeRegExp(query);
-        const regex = new RegExp(\`(\${escapedQuery})\`, 'gi');
-
-        return text.replace(regex, '<span class="highlight">$1</span>');
-    }
-
-    function escapeHtml(text) {
-        // simple html escape to avoid injection in our innerHTML usage
-        return text.replace(/[&<>"']/g, function(m) {
-            return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m];
-        });
-    }
-
-    function escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
-    }
-
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) &&
-            !resultsContainer.contains(e.target) &&
-            modalOverlay.style.display !== 'flex') {
-            resultsContainer.style.display = 'none';
         }
+        
+        async function performSearch() {
+            const searchTerm = searchInput.value.trim();
+            state.searchTerm = searchTerm;
+            
+            if (searchTerm === '') {
+                // Optional: Show validation message
+                searchInput.classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => {
+                    searchInput.classList.remove('ring-2', 'ring-red-500');
+                }, 2000);
+                return;
+            }
+            
+            // Show modal with loading state
+            openModal();
+            loadingSpinner.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            
+            try {
+                // Fetch data from API
+                const apiResponse = await fetchItemsFromAPI(searchTerm);
+                
+                // Store all results and update pagination state
+                state.allResults = apiResponse.results;
+                state.totalPages = Math.ceil(apiResponse.totalCount / state.itemsPerPage);
+                state.currentPage = 1;
+                
+                // Hide loading spinner
+                loadingSpinner.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                
+                // Update table with results
+                if (state.allResults.length > 0) {
+                    noResultsMessage.classList.add('hidden');
+                    paginationContainer.classList.remove('hidden');
+                    renderTableData();
+                    updatePaginationInfo();
+                } else {
+                    noResultsMessage.classList.remove('hidden');
+                    paginationContainer.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                loadingSpinner.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                noResultsMessage.textContent = 'An error occurred while fetching data.';
+                noResultsMessage.classList.remove('hidden');
+                paginationContainer.classList.add('hidden');
+            }
+        }
+        
+        // For testing purposes only - replace this with your actual API implementation
+        // This simulates an API response for development/testing
+        async function mockFetchForTesting(searchTerm) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Generate mock data
+                    const mockData = [];
+                    for (let i = 0; i < 350; i++) {
+                        mockData.push({
+                            name: `Item ${i + 1} ${searchTerm ? `matching "${searchTerm}"` : ''}`,
+                            description: `Description for item ${i + 1}`,
+                            owner: `Owner ${(i % 5) + 1}`
+                        });
+                    }
+                    
+                    resolve({
+                        results: mockData,
+                        totalCount: mockData.length
+                    });
+                }, 800);
+            });
+        }
+        
+        // Event Listeners
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        prevPageBtn.addEventListener('click', () => goToPage(state.currentPage - 1));
+        nextPageBtn.addEventListener('click', () => goToPage(state.currentPage + 1));
+        
+        closeModal.addEventListener('click', closeModalHandler);
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeModalHandler();
+            }
+        });
+        
+        // IMPORTANT: For development/testing only
+        // Replace fetchItemsFromAPI with mockFetchForTesting in the performSearch function
+        // to test without an actual API endpoint
+        // In production, use the real fetchItemsFromAPI function
     });
-});
 </script>
-
-</body>
-</html>
