@@ -1,0 +1,170 @@
+<script>
+// Add this modal HTML to your page:
+/*
+<div id="workitemModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <input type="text" id="modalFilter" placeholder="Filter workitems...">
+        <span class="close">&times;</span>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Description</th>
+                    <th>Version</th>
+                </tr>
+            </thead>
+            <tbody id="modalResults"></tbody>
+        </table>
+        <div id="pagination"></div>
+    </div>
+</div>
+*/
+
+// Add this CSS (or adjust to match your existing styles):
+/*
+.modal {
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 1200px;
+}
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.highlight {
+    background-color: yellow;
+    font-weight: bold;
+}
+#pagination button {
+    margin: 0 5px;
+}
+#pagination button.active {
+    font-weight: bold;
+    text-decoration: underline;
+}
+*/
+
+// Add JUST THESE NEW FUNCTIONS to your existing JavaScript
+// (all your original code remains unchanged)
+
+// 1. Modal functionality
+const modal = document.getElementById('workitemModal');
+const modalResults = document.getElementById('modalResults');
+const modalFilter = document.getElementById('modalFilter');
+const pagination = document.getElementById('pagination');
+const closeModal = document.querySelector('.close');
+let currentPage = 1;
+const itemsPerPage = 100;
+let modalDebounceTimer;
+
+// Hook up your existing "Show All" button to open modal
+document.getElementById('searchAllBtn').addEventListener('click', function() {
+    openModal(allWorkitems);
+});
+document.getElementById('showAllBtn').addEventListener('click', function() {
+    openModal(allWorkitems);
+});
+
+// Modal filter functionality
+modalFilter.addEventListener('input', function() {
+    clearTimeout(modalDebounceTimer);
+    modalDebounceTimer = setTimeout(() => {
+        const query = this.value.toLowerCase();
+        const filtered = query ? 
+            allWorkitems.filter(item => 
+                (item.name && item.name.toLowerCase().includes(query)) ||
+                (item.email && item.email.toLowerCase().includes(query)) ||
+                (item.description && item.description.toLowerCase().includes(query))
+            ) : [...allWorkitems];
+        
+        currentPage = 1;
+        displayModalResults(filtered);
+    }, 300);
+});
+
+// Open modal with workitems
+function openModal(workitems) {
+    modalFilter.value = '';
+    modal.style.display = 'block';
+    displayModalResults(workitems);
+}
+
+// Display results in modal table
+function displayModalResults(workitems) {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageItems = workitems.slice(start, end);
+    
+    modalResults.innerHTML = pageItems.map(item => `
+        <tr onclick="selectModalItem(${JSON.stringify(item).replace(/"/g, '&quot;')})" 
+            style="cursor:pointer;">
+            <td>${highlightText(item.name || '', modalFilter.value)}</td>
+            <td>${highlightText(item.email || '', modalFilter.value)}</td>
+            <td>${highlightText(item.description || '', modalFilter.value)}</td>
+            <td>${item.version || ''}</td>
+        </tr>
+    `).join('');
+    
+    setupPagination(workitems.length);
+}
+
+// Pagination controls
+function setupPagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    pagination.innerHTML = `
+        <button onclick="prevPage()" ${currentPage <= 1 ? 'disabled' : ''}>Previous</button>
+        ${Array.from({length: totalPages}, (_, i) => 
+            `<button onclick="goToPage(${i+1})" ${i+1 === currentPage ? 'class="active"' : ''}>
+                ${i+1}
+            </button>`
+        ).join('')}
+        <button onclick="nextPage()" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+    `;
+}
+
+// Pagination functions (add these to global scope)
+window.prevPage = () => { currentPage--; displayModalResults(allWorkitems); };
+window.nextPage = () => { currentPage++; displayModalResults(allWorkitems); };
+window.goToPage = (page) => { currentPage = page; displayModalResults(allWorkitems); };
+
+// Select item from modal
+window.selectModalItem = (item) => {
+    workitemIdInput.value = item.id || '';
+    workitemNameInput.value = item.name || '';
+    workitemEmailInput.value = item.email || '';
+    workitemDescriptionInput.value = item.description || '';
+    workitemVersionInput.value = item.version || '';
+    searchInput.value = item.name || '';
+    modal.style.display = 'none';
+};
+
+// Helper function
+function highlightText(text, query) {
+    if (!query || !text) return text || '';
+    return text.replace(new RegExp(`(${query})`, 'gi'), '<span class="highlight">$1</span>');
+}
+
+// Close modal handlers
+closeModal.addEventListener('click', () => modal.style.display = 'none');
+window.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+});
+
+</script>
