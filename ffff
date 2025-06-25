@@ -1,0 +1,1065 @@
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="search-wrapper">
+                <div class="input-group mb-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search work items...">
+                    <button class="btn btn-primary" type="button" id="searchButton" data-bs-toggle="modal" data-bs-target="#searchModal">
+                        Search
+                    </button>
+                </div>
+                <div id="searchResultsDropdown" class="search-results-dropdown">
+                    <!-- Quick search results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-container">
+        <h2 class="mb-4">Work Item Details</h2>
+        <form id="workItemForm">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="id" class="form-label">ID</label>
+                    <input type="text" class="form-control" id="id" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="name" class="form-label required-field">Name</label>
+                    <input type="text" class="form-control" id="name" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="widentity" class="form-label required-field">WIdentity</label>
+                    <input type="text" class="form-control" id="widentity" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="version" class="form-label">Version</label>
+                    <input type="text" class="form-control" id="version" readonly>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label required-field">Description</label>
+                <textarea class="form-control" id="description" rows="4" required></textarea>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="roleOwner" class="form-label required-field">Role Owner</label>
+                    <input type="text" class="form-control" id="roleOwner" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="email" class="form-label required-field">Email</label>
+                    <input type="email" class="form-control" id="email" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="status" class="form-label required-field">Status</label>
+                    <select class="form-select" id="status" required>
+                        <option value="">Select status</option>
+                        <option value="Active">Active</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="roleName" class="form-label required-field">Role Name</label>
+                    <select class="form-select" id="roleName" required>
+                        <option value="">Select role</option>
+                        <option value="Developer">Developer</option>
+                        <option value="QA Engineer">QA Engineer</option>
+                        <option value="Product Manager">Product Manager</option>
+                        <option value="Designer">Designer</option>
+                        <option value="DevOps">DevOps</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="dateCreated" class="form-label">Date Created</label>
+                    <input type="text" class="form-control" id="dateCreated" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="dateModified" class="form-label">Date Modified</label>
+                    <input type="text" class="form-control" id="dateModified" readonly>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end mt-4">
+                <button type="button" class="btn btn-secondary me-2" id="clearButton">Clear</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Search Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="searchModalLabel">Search Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingResults" class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <span class="ms-2">Loading results...</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Role Name</th>
+                                <th>Status</th>
+                                <th>Role Owner</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchResultsTable">
+                            <!-- Search results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noResults" class="text-center py-3 d-none">
+                    <p class="text-muted">No matching work items found</p>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <div>
+                    <span id="resultCount" class="text-muted"></span>
+                </div>
+                <nav aria-label="Search results pagination">
+                    <ul class="pagination" id="searchPagination">
+                        <!-- Pagination will be populated here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Container for notifications -->
+<div class="alert-container" id="alertContainer"></div>
+
+<!-- Debug Panel -->
+<div id="debugPanel" class="debug-panel">
+    <h6>API Debug Information</h6>
+    <div id="debugContent"></div>
+</div>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // API configuration
+        const API_BASE_URL = 'http://localhost:8080/api/workitems'; // Replace with your actual API endpoint
+        
+        // Debug mode
+        let debugMode = false;
+        
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const searchResultsDropdown = document.getElementById('searchResultsDropdown');
+        const searchResultsTable = document.getElementById('searchResultsTable');
+        const noResults = document.getElementById('noResults');
+        const resultCount = document.getElementById('resultCount');
+        const searchPagination = document.getElementById('searchPagination');
+        const workItemForm = document.getElementById('workItemForm');
+        const clearButton = document.getElementById('clearButton');
+        const searchModal = document.getElementById('searchModal');
+        const loadingResults = document.getElementById('loadingResults');
+        const alertContainer = document.getElementById('alertContainer');
+        const apiStatus = document.getElementById('apiStatus');
+        const toggleDebugBtn = document.getElementById('toggleDebug');
+        const debugPanel = document.getElementById('debugPanel');
+        const debugContent = document.getElementById('debugContent');
+        
+        // Form fields
+        const idField = document.getElementById('id');
+        const nameField = document.getElementById('name');
+        const widentityField = document.getElementById('widentity');
+        const versionField = document.getElementById('version');
+        const descriptionField = document.getElementById('description');
+        const roleOwnerField = document.getElementById('roleOwner');
+        const emailField = document.getElementById('email');
+        const statusField = document.getElementById('status');
+        const roleNameField = document.getElementById('roleName');
+        const dateCreatedField = document.getElementById('dateCreated');
+        const dateModifiedField = document.getElementById('dateModified');
+
+        // Pagination settings
+        const itemsPerPage = 100;
+        let currentPage = 1;
+        let filteredItems = [];
+        let allWorkItems = [];
+        
+        // Debug logging
+        function logDebug(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            
+            console.log(logMessage, data || '');
+            
+            if (debugMode) {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'debug-log-entry';
+                logEntry.innerHTML = `<strong>${logMessage}</strong>`;
+                
+                if (data) {
+                    try {
+                        const jsonStr = JSON.stringify(data, null, 2);
+                        logEntry.innerHTML += `<pre>${jsonStr}</pre>`;
+                    } catch (e) {
+                        logEntry.innerHTML += `<pre>[Object cannot be stringified]</pre>`;
+                    }
+                }
+                
+                debugContent.appendChild(logEntry);
+                debugPanel.scrollTop = debugPanel.scrollHeight;
+            }
+        }
+        
+        // Toggle debug panel
+        toggleDebugBtn.addEventListener('click', function() {
+            debugMode = !debugMode;
+            debugPanel.classList.toggle('show', debugMode);
+            toggleDebugBtn.textContent = debugMode ? 'Hide Debug' : 'Show Debug';
+        });
+
+        // Check API connection
+        async function checkApiConnection() {
+            apiStatus.className = 'api-status checking';
+            apiStatus.textContent = 'Checking API...';
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(`${API_BASE_URL}`, {
+                    method: 'HEAD',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    apiStatus.className = 'api-status connected';
+                    apiStatus.textContent = 'API Connected';
+                    logDebug('API connection successful');
+                    return true;
+                } else {
+                    throw new Error(`API responded with status: ${response.status}`);
+                }
+            } catch (error) {
+                apiStatus.className = 'api-status disconnected';
+                apiStatus.textContent = 'API Disconnected';
+                
+                let errorMessage = 'API connection failed';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'API connection timeout';
+                } else if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+                
+                logDebug(errorMessage, error);
+                showNotification(`${errorMessage}. Please check your API server or connection.`, 'danger');
+                return false;
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            logDebug(`Notification (${type}): ${message}`);
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            alertContainer.appendChild(alert);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => {
+                    if (alertContainer.contains(alert)) {
+                        alertContainer.removeChild(alert);
+                    }
+                }, 150);
+            }, 5000);
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return dateString; // Return original if invalid
+                }
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } catch (e) {
+                logDebug('Date formatting error', e);
+                return dateString;
+            }
+        }
+
+        // Fetch all work items from API
+        async function fetchWorkItems() {
+            logDebug('Fetching all work items');
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(`${API_BASE_URL}`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                logDebug('Fetched work items', { count: data.length });
+                allWorkItems = data;
+                return data;
+            } catch (error) {
+                let errorMessage = 'Error fetching work items';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout while fetching work items';
+                } else if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+                
+                logDebug(errorMessage, error);
+                showNotification(errorMessage, 'danger');
+                return [];
+            }
+        }
+
+        // Fetch work items by search query
+        async function searchWorkItems(query, page = 1, limit = itemsPerPage) {
+            logDebug('Searching work items', { query, page, limit });
+            
+            try {
+                // Show loading indicator
+                loadingResults.style.display = 'flex';
+                searchResultsTable.innerHTML = '';
+                noResults.classList.add('d-none');
+                
+                // Build query parameters
+                const params = new URLSearchParams({
+                    q: query,
+                    page: page,
+                    limit: limit
+                });
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(`${API_BASE_URL}/search?${params}`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                // Hide loading indicator
+                loadingResults.style.display = 'none';
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+                
+                const data = await response.json();
+                logDebug('Search results', { 
+                    items: data.items ? data.items.length : 0, 
+                    total: data.total 
+                });
+                
+                return data;
+            } catch (error) {
+                let errorMessage = 'Error searching work items';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout while searching';
+                } else if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+                
+                logDebug(errorMessage, error);
+                showNotification(errorMessage, 'danger');
+                loadingResults.style.display = 'none';
+                
+                // If API is not available, use fallback demo data for search
+                if (!await checkApiConnection()) {
+                    logDebug('Using fallback demo data for search');
+                    return useFallbackSearch(query, page, limit);
+                }
+                
+                return { items: [], total: 0 };
+            }
+        }
+
+        // Fallback search using demo data
+        function useFallbackSearch(query, page, limit) {
+            // Demo data for fallback
+            const demoItems = [
+                {
+                    id: "WI-1001",
+                    name: "Task: Developer task 1",
+                    widentity: "wi-developer-1",
+                    description: "This is a sample task for Developer team member to work on.",
+                    roleOwner: "John Smith",
+                    email: "john.smith@example.com",
+                    status: "Active",
+                    roleName: "Developer",
+                    version: "1.0",
+                    dateCreated: "2023-05-15T10:30:00",
+                    dateModified: "2023-05-15T10:30:00"
+                },
+                {
+                    id: "WI-1002",
+                    name: "Bug: QA Engineer task 2",
+                    widentity: "wi-qa-engineer-2",
+                    description: "This is a sample bug for QA Engineer team member to work on.",
+                    roleOwner: "Jane Johnson",
+                    email: "jane.johnson@example.com",
+                    status: "Pending",
+                    roleName: "QA Engineer",
+                    version: "1.0",
+                    dateCreated: "2023-05-16T09:15:00",
+                    dateModified: "2023-05-16T09:15:00"
+                },
+                {
+                    id: "WI-1003",
+                    name: "Feature: Product Manager task 3",
+                    widentity: "wi-product-manager-3",
+                    description: "This is a sample feature for Product Manager team member to work on.",
+                    roleOwner: "Michael Williams",
+                    email: "michael.williams@example.com",
+                    status: "Completed",
+                    roleName: "Product Manager",
+                    version: "1.0",
+                    dateCreated: "2023-05-17T14:45:00",
+                    dateModified: "2023-05-17T14:45:00"
+                }
+            ];
+            
+            // Filter items based on query
+            const lowercaseQuery = query.toLowerCase();
+            const filtered = demoItems.filter(item => {
+                return (
+                    item.name.toLowerCase().includes(lowercaseQuery) ||
+                    item.widentity.toLowerCase().includes(lowercaseQuery) ||
+                    item.description.toLowerCase().includes(lowercaseQuery) ||
+                    item.roleOwner.toLowerCase().includes(lowercaseQuery) ||
+                    item.roleName.toLowerCase().includes(lowercaseQuery) ||
+                    item.status.toLowerCase().includes(lowercaseQuery)
+                );
+            });
+            
+            // Paginate results
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedItems = filtered.slice(startIndex, endIndex);
+            
+            return {
+                items: paginatedItems,
+                total: filtered.length
+            };
+        }
+
+        // Fetch a single work item by ID
+        async function fetchWorkItem(id) {
+            logDebug('Fetching work item', { id });
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+                
+                const data = await response.json();
+                logDebug('Fetched work item', data);
+                return data;
+            } catch (error) {
+                let errorMessage = `Error fetching work item ${id}`;
+                if (error.name === 'AbortError') {
+                    errorMessage = `Request timeout while fetching work item ${id}`;
+                } else if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+                
+                logDebug(errorMessage, error);
+                showNotification(errorMessage, 'danger');
+                
+                // If API is not available, use fallback demo data
+                if (!await checkApiConnection()) {
+                    logDebug('Using fallback demo data for item');
+                    return useFallbackItem(id);
+                }
+                
+                return null;
+            }
+        }
+
+        // Fallback item data
+        function useFallbackItem(id) {
+            // If id is "latest", return the first demo item
+            if (id === "latest") {
+                return {
+                    id: "WI-1001",
+                    name: "Task: Developer task 1",
+                    widentity: "wi-developer-1",
+                    description: "This is a sample task for Developer team member to work on.",
+                    roleOwner: "John Smith",
+                    email: "john.smith@example.com",
+                    status: "Active",
+                    roleName: "Developer",
+                    version: "1.0",
+                    dateCreated: "2023-05-15T10:30:00",
+                    dateModified: "2023-05-15T10:30:00"
+                };
+            }
+            
+            // Otherwise return a demo item based on the ID
+            return {
+                id: id,
+                name: `Demo Work Item ${id}`,
+                widentity: `wi-demo-${id}`,
+                description: "This is a demo work item for when the API is unavailable.",
+                roleOwner: "Demo User",
+                email: "demo.user@example.com",
+                status: "Active",
+                roleName: "Developer",
+                version: "1.0",
+                dateCreated: new Date().toISOString(),
+                dateModified: new Date().toISOString()
+            };
+        }
+
+        // Save work item
+        async function saveWorkItem(workItem) {
+            logDebug('Saving work item', workItem);
+            
+            try {
+                const method = workItem.id ? 'PUT' : 'POST';
+                const url = workItem.id ? `${API_BASE_URL}/${workItem.id}` : API_BASE_URL;
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(workItem),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+                
+                const savedItem = await response.json();
+                logDebug('Work item saved successfully', savedItem);
+                showNotification('Work item saved successfully!');
+                return savedItem;
+            } catch (error) {
+                let errorMessage = 'Error saving work item';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout while saving work item';
+                } else if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+                
+                logDebug(errorMessage, error);
+                showNotification(errorMessage, 'danger');
+                
+                // If API is not available, use fallback demo data
+                if (!await checkApiConnection()) {
+                    logDebug('Using fallback for save operation');
+                    return useFallbackSave(workItem);
+                }
+                
+                return null;
+            }
+        }
+
+        // Fallback save operation
+        function useFallbackSave(workItem) {
+            // Generate an ID if it doesn't exist
+            if (!workItem.id) {
+                workItem.id = `WI-${1000 + Math.floor(Math.random() * 1000)}`;
+            }
+            
+            // Set version
+            workItem.version = workItem.version ? 
+                incrementVersion(workItem.version) : "1.0";
+            
+            // Set dates
+            const now = new Date().toISOString();
+            workItem.dateModified = now;
+            if (!workItem.dateCreated) {
+                workItem.dateCreated = now;
+            }
+            
+            logDebug('Fallback save operation', workItem);
+            return workItem;
+        }
+
+        // Increment version number
+        function incrementVersion(version) {
+            if (!version || !version.includes('.')) {
+                return "1.1";
+            }
+            
+            const parts = version.split('.');
+            if (parts.length !== 2) {
+                return "1.1";
+            }
+            
+            try {
+                const major = parseInt(parts[0]);
+                const minor = parseInt(parts[1]);
+                return `${major}.${minor + 1}`;
+            } catch (e) {
+                return "1.1";
+            }
+        }
+
+        // Load work item data into form
+        function loadWorkItem(workItem) {
+            logDebug('Loading work item into form', workItem);
+            
+            idField.value = workItem.id || '';
+            nameField.value = workItem.name || '';
+            widentityField.value = workItem.widentity || '';
+            versionField.value = workItem.version || '';
+            descriptionField.value = workItem.description || '';
+            roleOwnerField.value = workItem.roleOwner || '';
+            emailField.value = workItem.email || '';
+            statusField.value = workItem.status || '';
+            roleNameField.value = workItem.roleName || '';
+            dateCreatedField.value = workItem.dateCreated ? formatDate(workItem.dateCreated) : '';
+            dateModifiedField.value = workItem.dateModified ? formatDate(workItem.dateModified) : '';
+            
+            // Close the dropdown and modal after selecting an item
+            searchResultsDropdown.style.display = 'none';
+            const modal = bootstrap.Modal.getInstance(searchModal);
+            if (modal) {
+                modal.hide();
+            }
+        }
+
+        // Clear form fields
+        function clearForm() {
+            logDebug('Clearing form');
+            workItemForm.reset();
+            idField.value = '';
+            versionField.value = '';
+            dateCreatedField.value = '';
+            dateModifiedField.value = '';
+        }
+
+        // Quick search for dropdown
+        async function quickSearch() {
+            const query = searchInput.value.trim();
+            
+            if (query === '') {
+                searchResultsDropdown.style.display = 'none';
+                return;
+            }
+            
+            logDebug('Performing quick search', { query });
+            
+            try {
+                // Get filtered items (limit to 5 for dropdown)
+                const searchResult = await searchWorkItems(query, 1, 5);
+                const results = searchResult.items || [];
+                
+                // Display results in dropdown
+                searchResultsDropdown.innerHTML = '';
+                
+                if (results.length === 0) {
+                    searchResultsDropdown.innerHTML = '<div class="search-result-item">No matching work items found</div>';
+                } else {
+                    results.forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'search-result-item';
+                        resultItem.innerHTML = `
+                            <div><strong>${item.name}</strong> (${item.id})</div>
+                            <div class="text-muted small">${item.description ? item.description.substring(0, 60) + (item.description.length > 60 ? '...' : '') : ''}</div>
+                        `;
+                        
+                        resultItem.addEventListener('click', () => {
+                            loadWorkItem(item);
+                        });
+                        
+                        searchResultsDropdown.appendChild(resultItem);
+                    });
+                    
+                    // Add a "See all results" option if there are more results
+                    if (searchResult.total > 5) {
+                        const seeAllItem = document.createElement('div');
+                        seeAllItem.className = 'search-result-item text-primary';
+                        seeAllItem.innerHTML = `<strong>See all results (${searchResult.total})</strong>`;
+                        
+                        seeAllItem.addEventListener('click', () => {
+                            searchButton.click();
+                        });
+                        
+                        searchResultsDropdown.appendChild(seeAllItem);
+                    }
+                }
+                
+                searchResultsDropdown.style.display = 'block';
+            } catch (error) {
+                logDebug('Quick search error', error);
+                searchResultsDropdown.innerHTML = '<div class="search-result-item text-danger">Error loading results</div>';
+                searchResultsDropdown.style.display = 'block';
+            }
+        }
+
+        // Full search for modal
+        async function fullSearch() {
+            const query = searchInput.value.trim();
+            logDebug('Performing full search', { query, page: currentPage });
+            
+            try {
+                // Get search results with pagination
+                const searchResult = await searchWorkItems(query, currentPage, itemsPerPage);
+                
+                // Store results and update UI
+                filteredItems = searchResult.items || [];
+                const totalItems = searchResult.total || 0;
+                
+                // Update the UI
+                updateResultsCount(totalItems);
+                displaySearchResults();
+                updatePagination(totalItems);
+            } catch (error) {
+                logDebug('Full search error', error);
+                showNotification('Error performing search. Please try again.', 'danger');
+                
+                // Clear results and show error
+                filteredItems = [];
+                searchResultsTable.innerHTML = '';
+                noResults.classList.remove('d-none');
+                noResults.innerHTML = '<p class="text-danger">Error loading results. Please try again.</p>';
+                resultCount.textContent = '';
+                searchPagination.innerHTML = '';
+            }
+        }
+
+        // Update the count of results
+        function updateResultsCount(totalItems) {
+            if (filteredItems.length === 0) {
+                resultCount.textContent = 'No results found';
+                noResults.classList.remove('d-none');
+            } else {
+                const startIndex = (currentPage - 1) * itemsPerPage + 1;
+                const endIndex = Math.min(startIndex + filteredItems.length - 1, totalItems);
+                resultCount.textContent = `Showing ${startIndex}-${endIndex} of ${totalItems} results`;
+                noResults.classList.add('d-none');
+            }
+        }
+
+        // Display search results for the current page
+        function displaySearchResults() {
+            searchResultsTable.innerHTML = '';
+            
+            if (filteredItems.length === 0) {
+                return;
+            }
+            
+            // Display items for current page
+            filteredItems.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Create status badge class
+                let statusClass = '';
+                if (item.status) {
+                    const statusLower = item.status.toLowerCase().replace(' ', '');
+                    switch(statusLower) {
+                        case 'active': statusClass = 'status-active'; break;
+                        case 'pending': statusClass = 'status-pending'; break;
+                        case 'completed': statusClass = 'status-completed'; break;
+                        case 'onhold': statusClass = 'status-onhold'; break;
+                        case 'cancelled': statusClass = 'status-cancelled'; break;
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${item.id || ''}</td>
+                    <td>${item.name || ''}</td>
+                    <td>${item.roleName || ''}</td>
+                    <td>${item.status ? `<span class="status-badge ${statusClass}"></span>${item.status}` : ''}</td>
+                    <td>${item.roleOwner || ''}</td>
+                `;
+                
+                row.addEventListener('click', () => {
+                    loadWorkItem(item);
+                });
+                
+                searchResultsTable.appendChild(row);
+            });
+        }
+
+        // Update pagination controls
+        function updatePagination(totalItems) {
+            searchPagination.innerHTML = '';
+            
+            if (filteredItems.length === 0) {
+                return;
+            }
+            
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            
+            // Only show pagination if there's more than one page
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+            prevLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    fullSearch();
+                }
+            });
+            searchPagination.appendChild(prevLi);
+            
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Adjust start page if we're near the end
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // First page if not visible
+            if (startPage > 1) {
+                const firstLi = document.createElement('li');
+                firstLi.className = 'page-item';
+                firstLi.innerHTML = `<a class="page-link" href="#">1</a>`;
+                firstLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = 1;
+                    fullSearch();
+                });
+                searchPagination.appendChild(firstLi);
+                
+                // Ellipsis if needed
+                if (startPage > 2) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = `<a class="page-link" href="#">...</a>`;
+                    searchPagination.appendChild(ellipsisLi);
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                pageLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    fullSearch();
+                });
+                searchPagination.appendChild(pageLi);
+            }
+            
+            // Ellipsis and last page if not visible
+            if (endPage < totalPages) {
+                // Ellipsis if needed
+                if (endPage < totalPages - 1) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = `<a class="page-link" href="#">...</a>`;
+                    searchPagination.appendChild(ellipsisLi);
+                }
+                
+                // Last page
+                const lastLi = document.createElement('li');
+                lastLi.className = 'page-item';
+                lastLi.innerHTML = `<a class="page-link" href="#">${totalPages}</a>`;
+                lastLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = totalPages;
+                    fullSearch();
+                });
+                searchPagination.appendChild(lastLi);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+            nextLi.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    fullSearch();
+                }
+            });
+            searchPagination.appendChild(nextLi);
+        }
+
+        // Get form data as object
+        function getFormData() {
+            return {
+                id: idField.value || null,
+                name: nameField.value,
+                widentity: widentityField.value,
+                description: descriptionField.value,
+                roleOwner: roleOwnerField.value,
+                email: emailField.value,
+                status: statusField.value,
+                roleName: roleNameField.value
+            };
+        }
+
+        // Event listeners
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                quickSearch();
+            }, 300); // Debounce search to avoid too many API calls
+        });
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim() !== '') {
+                quickSearch();
+            }
+        });
+
+        searchButton.addEventListener('click', function() {
+            currentPage = 1; // Reset to first page on new search
+            fullSearch();
+        });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (searchResultsDropdown.style.display === 'block') {
+                    // If dropdown is visible, select the first item
+                    const firstItem = searchResultsDropdown.querySelector('.search-result-item');
+                    if (firstItem && !firstItem.classList.contains('text-primary')) {
+                        firstItem.click();
+                    } else {
+                        // If no items or only "See all results", open modal
+                        searchButton.click();
+                    }
+                } else {
+                    // If dropdown is not visible, open modal
+                    searchButton.click();
+                }
+            }
+        });
+
+        clearButton.addEventListener('click', clearForm);
+
+        workItemForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Validate form
+            if (!this.checkValidity()) {
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+            
+            // Get form data
+            const workItem = getFormData();
+            
+            // Save work item
+            const savedItem = await saveWorkItem(workItem);
+            
+            // If save was successful, update form with saved data
+            if (savedItem) {
+                loadWorkItem(savedItem);
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchResultsDropdown.contains(e.target)) {
+                searchResultsDropdown.style.display = 'none';
+            }
+        });
+
+        // Initialize the modal with search results when opened
+        searchModal.addEventListener('show.bs.modal', function() {
+            currentPage = 1; // Reset to first page when opening modal
+            fullSearch();
+        });
+
+        // Initialize - check API connection and load first work item
+        async function init() {
+            try {
+                // Check API connection first
+                const isConnected = await checkApiConnection();
+                
+                // Try to fetch the first work item
+                const firstItem = await fetchWorkItem('latest');
+                if (firstItem) {
+                    loadWorkItem(firstItem);
+                } else {
+                    clearForm();
+                }
+            } catch (error) {
+                logDebug('Initialization error', error);
+                showNotification('Failed to load initial data. Using demo mode.', 'warning');
+                clearForm();
+            }
+        }
+
+        // Start initialization
+        init();
+    });
+</script>
