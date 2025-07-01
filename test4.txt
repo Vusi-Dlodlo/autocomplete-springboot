@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced API Autocomplete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+<style>
+.dropdown-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    margin-top: 0.25rem;
+    max-height: 15rem;
+    overflow-y: auto;
+    z-index: 1000;
+}
+.product-item:hover {
+    background-color: #f8f9fa;
+}
+.search-container {
+    position: relative;
+}
+.flash-success {
+    background-color: #d1e7dd !important;
+    border-color: #badbcc !important;
+}
+</style>
+</head>
+<body>
+  <!-- Main Search Section -->
+            <div class="mb-4">
+                <h2 class="h5 text-secondary mb-3">Search Products</h2>
+                
+                <!-- Search Input Row -->
+                <div class="row g-3 mb-3">
+                    <div class="col">
+                        <div class="search-container">
+                            <input 
+                                type="text" 
+                                id="searchInput" 
+                                placeholder="Type to search products..."
+                                class="form-control form-control-lg"
+                            >
+                            <!-- Dropdown Results -->
+                            <div id="dropdownResults" class="dropdown-results d-none">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <button 
+                            id="showModalBtn"
+                            class="btn btn-primary btn-lg"
+                        >
+                            Show All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thymeleaf Input Fields -->
+            <div class="mb-4">
+                <h2 class="h5 text-secondary mb-3">Product Details (Thymeleaf Inputs)</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-secondary">Product ID</label>
+                        <input 
+                            type="text" 
+                            id="productId" 
+                            name="productId"
+                            th:field="*{productId}"
+                            class="form-control"
+                            readonly
+                        >
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-secondary">Product Name</label>
+                        <input 
+                            type="text" 
+                            id="productName" 
+                            name="productName"
+                            th:field="*{productName}"
+                            class="form-control"
+                            readonly
+                        >
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-secondary">Category</label>
+                        <input 
+                            type="text" 
+                            id="category" 
+                            name="category"
+                            th:field="*{category}"
+                            class="form-control"
+                            readonly
+                        >
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-secondary">Price</label>
+                        <input 
+                            type="text" 
+                            id="price" 
+                            name="price"
+                            th:field="*{price}"
+                            class="form-control"
+                            readonly
+                        >
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="productModalLabel">Select Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="modal-body p-0">
+                <!-- Search Info -->
+                <div class="bg-light px-4 py-3 border-bottom">
+                    <p class="mb-0 text-muted small">Showing results for: <span id="searchTerm" class="fw-medium text-dark"></span></p>
+                </div>
+                
+                <!-- Results List -->
+                <div class="p-4" style="max-height: 400px; overflow-y: auto;">
+                    <div id="modalResults">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer with Pagination -->
+            <div class="modal-footer justify-content-between">
+                <div class="text-muted small">
+                    Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalResults">0</span> results
+                </div>
+                <nav aria-label="Product pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="prevPageItem">
+                            <button class="page-link" id="prevPage">Previous</button>
+                        </li>
+                        <div id="pageNumbers" class="d-flex">
+                            <!-- Page numbers will be populated here -->
+                        </div>
+                        <li class="page-item" id="nextPageItem">
+                            <button class="page-link" id="nextPage">Next</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+</div>
+
+<script>
+    // API Configuration - Update these URLs to match your Spring Boot endpoints
+    const SEARCH_API_URL = '/api/products/search';
+    const ALL_PRODUCTS_API_URL = '/api/products';
+    
+    let currentPage = 1;
+    const itemsPerPage = 5;
+    let filteredProducts = [];
+    let currentSearchTerm = '';
+    let searchTimeout = null;
+
+    const searchInput = document.getElementById('searchInput');
+    const dropdownResults = document.getElementById('dropdownResults');
+    const showModalBtn = document.getElementById('showModalBtn');
+    const modal = document.getElementById('modal');
+    const closeModal = document.getElementById('closeModal');
+    const modalResults = document.getElementById('modalResults');
+    const searchTerm = document.getElementById('searchTerm');
+
+    // API Functions
+    async function searchProducts(query, page = 0, size = 5) {
+        try {
+            const params = new URLSearchParams({
+                search: query,
+                page: page,
+                size: size
+            });
+            
+            const response = await fetch(`${SEARCH_API_URL}?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error searching products:', error);
+            return { content: [], totalElements: 0, totalPages: 0 };
+        }
+    }
+
+    async function getAllProducts(page = 0, size = 5) {
+        try {
+            const params = new URLSearchParams({
+                page: page,
+                size: size
+            });
+            
+            const response = await fetch(`${ALL_PRODUCTS_API_URL}?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            return { content: [], totalElements: 0, totalPages: 0 };
+        }
+    }
+
+    // Search functionality with debouncing
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        currentSearchTerm = query;
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        if (query.length === 0) {
+            dropdownResults.classList.add('d-none');
+            return;
+        }
+
+        // Add loading indicator
+        dropdownResults.innerHTML = '<div class="p-3 text-muted small"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Searching...</div>';
+        dropdownResults.classList.remove('d-none');
+
+        // Debounce API calls (wait 300ms after user stops typing)
+        searchTimeout = setTimeout(async () => {
+            const result = await searchProducts(query, 0, 5);
+            displayDropdownResults(result.content || []);
+        }, 300);
+    });
+
+    // Display dropdown results
+    function displayDropdownResults(products) {
+        if (products.length === 0) {
+            dropdownResults.innerHTML = '<div class="p-3 text-muted small">No products found</div>';
+        } else {
+            dropdownResults.innerHTML = products.map(product => `
+                <div class="p-3 product-item border-bottom" style="cursor: pointer;" 
+                     data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}">
+                    <div class="fw-medium text-dark">${product.name}</div>
+                    <div class="small text-muted">${product.category} • ${product.price}</div>
+                </div>
+            `).join('');
+        }
+        dropdownResults.classList.remove('d-none');
+    }
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdownResults.contains(e.target)) {
+            dropdownResults.classList.add('d-none');
+        }
+    });
+
+    // Show modal
+    showModalBtn.addEventListener('click', async function() {
+        const query = searchInput.value.trim();
+        currentSearchTerm = query;
+        currentPage = 1;
+        
+        searchTerm.textContent = query || 'all products';
+        
+        // Show modal first
+        const modal = new bootstrap.Modal(document.getElementById('productModal'));
+        modal.show();
+        
+        // Show loading in modal
+        modalResults.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">Loading products...</p></div>';
+        
+        // Load data
+        await loadModalData();
+    });
+
+    // Modal close is handled by Bootstrap automatically
+
+    // Load modal data from API
+    async function loadModalData() {
+        try {
+            let result;
+            if (currentSearchTerm && currentSearchTerm.length > 0) {
+                result = await searchProducts(currentSearchTerm, currentPage - 1, itemsPerPage);
+            } else {
+                result = await getAllProducts(currentPage - 1, itemsPerPage);
+            }
+            
+            filteredProducts = result.content || [];
+            const totalElements = result.totalElements || 0;
+            const totalPages = result.totalPages || 0;
+            
+            displayModalResults(filteredProducts);
+            updatePagination(totalElements, totalPages);
+            
+        } catch (error) {
+            console.error('Error loading modal data:', error);
+            modalResults.innerHTML = '<div class="text-center py-5 text-danger">Error loading products. Please try again.</div>';
+        }
+    }
+
+    // Display modal results
+    function displayModalResults(products) {
+        if (products.length === 0) {
+            modalResults.innerHTML = '<div class="text-center py-5 text-muted">No products found</div>';
+        } else {
+            modalResults.innerHTML = products.map(product => `
+                <div class="card mb-3 product-item" style="cursor: pointer;"
+                     data-id="${product.id}" data-name="${product.name}" data-category="${product.category}" data-price="${product.price}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">${product.name}</h5>
+                                <p class="card-text text-muted small mb-0">${product.category}</p>
+                            </div>
+                            <span class="h5 text-primary mb-0">${product.price}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Update pagination
+    function updatePagination(totalElements, totalPages) {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalElements);
+
+        document.getElementById('showingStart').textContent = totalElements > 0 ? startIndex + 1 : 0;
+        document.getElementById('showingEnd').textContent = endIndex;
+        document.getElementById('totalResults').textContent = totalElements;
+
+        // Update page numbers
+        const pageNumbers = document.getElementById('pageNumbers');
+        pageNumbers.innerHTML = '';
+        
+        // Show max 5 page numbers around current page
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item';
+            if (i === currentPage) {
+                pageItem.classList.add('active');
+            }
+            
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            pageBtn.className = 'page-link';
+            pageBtn.addEventListener('click', async () => {
+                currentPage = i;
+                await loadModalData();
+            });
+            
+            pageItem.appendChild(pageBtn);
+            pageNumbers.appendChild(pageItem);
+        }
+
+        // Update prev/next buttons
+        const prevPageItem = document.getElementById('prevPageItem');
+        const nextPageItem = document.getElementById('nextPageItem');
+        
+        if (currentPage === 1) {
+            prevPageItem.classList.add('disabled');
+        } else {
+            prevPageItem.classList.remove('disabled');
+        }
+        
+        if (currentPage === totalPages || totalPages === 0) {
+            nextPageItem.classList.add('disabled');
+        } else {
+            nextPageItem.classList.remove('disabled');
+        }
+    }
+
+    // Pagination controls
+    document.getElementById('prevPage').addEventListener('click', async function() {
+        if (currentPage > 1) {
+            currentPage--;
+            await loadModalData();
+        }
+    });
+
+    document.getElementById('nextPage').addEventListener('click', async function() {
+        // We'll get totalPages from the API response, so we need to track it
+        currentPage++;
+        await loadModalData();
+    });
+
+    // Product selection (works for both dropdown and modal)
+    document.addEventListener('click', function(e) {
+        const productItem = e.target.closest('.product-item');
+        if (productItem) {
+            const id = productItem.dataset.id;
+            const name = productItem.dataset.name;
+            const category = productItem.dataset.category;
+            const price = productItem.dataset.price;
+
+            // Populate Thymeleaf input fields
+            document.getElementById('productId').value = id;
+            document.getElementById('productName').value = name;
+            document.getElementById('category').value = category;
+            document.getElementById('price').value = price;
+
+            // Update search input
+            searchInput.value = name;
+
+            // Hide dropdown and close modal
+            dropdownResults.classList.add('d-none');
+            const modalElement = document.getElementById('productModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            // Visual feedback
+            const inputs = ['productId', 'productName', 'category', 'price'];
+            inputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                input.classList.add('flash-success');
+                setTimeout(() => {
+                    input.classList.remove('flash-success');
+                }, 1000);
+            });
+        }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        // Focus on search input
+        searchInput.focus();
+    });
+</script>
+
+</body>
+</html>
+
+
