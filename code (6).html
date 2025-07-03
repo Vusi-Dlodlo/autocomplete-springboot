@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Workitem Search</title>
+    <style>
+        /* Reset some defaults */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        #appContainer {
+            width: 100%;
+            max-width: 700px;
+            border-radius: 10px;
+            padding: 30px 25px 40px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        h1 {
+            font-weight: 700;
+            margin-bottom: 0;
+            user-select: none;
+        }
+        #searchAndButtonContainer {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            width: 100%;
+        }
+        #searchContainer {
+            position: relative;
+            flex-grow: 1;
+        }
+        #workitemSearch {
+            width: 100%;
+            padding: 12px 50px 12px 20px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            outline-offset: 2px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #workitemSearch:focus {
+            outline: 3px solid;
+        }
+        #searchSpinner {
+            position: absolute;
+            top: 50%;
+            right: 18px;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            display: none;
+            user-select: none;
+        }
+        #searchResults {
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            background: white;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: none;
+            font-size: 0.95rem;
+        }
+        .autocomplete-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-bottom-style: solid;
+            border-bottom-width: 1px;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            background: white;
+            border-radius: 0;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-item:hover {
+            /* subtle background change on hover - no color */
+            background-color: #f0f0f0;
+        }
+        .autocomplete-item-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .highlight {
+            border-radius: 3px;
+            padding: 0 3px;
+        }
+        .autocomplete-item-details {
+            font-size: 0.85rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .autocomplete-item-details span {
+            white-space: nowrap;
+            user-select: text;
+        }
+        .no-results {
+            padding: 15px 20px;
+            font-style: italic;
+            text-align: center;
+            user-select: none;
+        }
+        #showAllBtn {
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 12px 24px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 180px;
+        }
+        #showAllBtn:hover {
+            transform: scale(1.05);
+        }
+        /* Outside detail inputs */
+        #selectedDetails {
+            margin-top: 8px;
+            padding: 20px 25px;
+            border-radius: 10px;
+            user-select: none;
+        }
+        #selectedDetails h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        #selectedDetails input[type=text],
+        #selectedDetails input[type=email],
+        #selectedDetails textarea {
+            width: 100%;
+            background: white;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            resize: vertical;
+            user-select: text;
+            transition: border-color 0.2s ease;
+        }
+        #selectedDetails input[readonly],
+        #selectedDetails textarea[readonly] {
+            cursor: default;
+        }
+        #selectedDetails textarea {
+            min-height: 80px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* Modal styling with table */
+        #modalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        #modalContent {
+            background: white;
+            max-width: 900px;
+            width: 100%;
+            max-height: 80vh;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        #modalHeader {
+            padding: 18px 24px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        #modalCloseBtn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.3s ease;
+        }
+        #modalCloseBtn:hover {
+            opacity: 0.6;
+        }
+        #modalBody {
+            padding: 15px 24px 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+        thead {
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom-style: solid;
+            border-bottom-width: 1px;
+            text-align: left;
+        }
+        tr:hover {
+            cursor: pointer;
+            background-color: #f0f0f0;
+        }
+        th {
+            font-weight: 700;
+        }
+        /* Pagination styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 8px;
+        }
+        .page-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background: white;
+        }
+        .page-btn:hover:not(:disabled) {
+            background: #f0f0f0;
+        }
+        .page-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .page-info {
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            #appContainer {
+                max-width: 100%;
+                padding: 20px 15px 30px;
+            }
+            #searchAndButtonContainer {
+                flex-direction: column;
+                gap: 12px;
+            }
+            #modalContent {
+                max-height: 90vh;
+            }
+            .pagination {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="appContainer" aria-live="polite">
+    <h1>Workitem Search</h1>
+    <div id="searchAndButtonContainer">
+        <div id="searchContainer">
+            <input type="text" id="workitemSearch" placeholder="Search for workitems..." autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="searchResults" aria-activedescendant="">
+            <span id="searchSpinner" aria-label="Loading spinner"></span>
+            <div id="searchResults" role="listbox" aria-live="polite" aria-atomic="true"></div>
+        </div>
+        <button id="showAllBtn" type="button" aria-haspopup="dialog" aria-label="Show all matching workitems">Show All</button>
+    </div>
+    <div id="selectedDetails" aria-live="polite" aria-atomic="true">
+        <h3>Selected Workitem Details</h3>
+        <input type="hidden" id="workitemIdInput">
+        <input type="text" id="workitemNameInput" placeholder="Workitem Name" readonly aria-label="Workitem Name">
+        <input type="email" id="workitemEmailInput" placeholder="Workitem Email" readonly aria-label="Workitem Email">
+        <textarea id="workitemDescriptionInput" placeholder="Workitem Description" readonly aria-label="Workitem Description"></textarea>
+        <input type="text" id="workitemVersionInput" placeholder="Workitem Version" readonly aria-label="Workitem Version">
+    </div>
+</div>
+
+<div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+    <div id="modalContent">
+        <header id="modalHeader">
+            <span id="modalTitle">Matching Workitems</span>
+            <button id="modalCloseBtn" aria-label="Close modal">×</button>
+        </header>
+        <section id="modalBody" tabindex="0">
+            <table id="workitemsTable" role="grid" aria-describedby="modalTitle">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows inserted here dynamically -->
+                </tbody>
+            </table>
+            <!-- Pagination controls for modal -->
+            <div class="pagination" id="modalPagination"></div>
+        </section>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const searchInput = document.getElementById('workitemSearch');
+    const resultsContainer = document.getElementById('searchResults');
+    const spinner = document.getElementById('searchSpinner');
+    const showAllBtn = document.getElementById('showAllBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const workitemsTableBody = document.querySelector('#workitemsTable tbody');
+    const modalPagination = document.getElementById('modalPagination');
+    const workitemIdInput = document.getElementById('workitemIdInput');
+    const workitemNameInput = document.getElementById('workitemNameInput');
+    const workitemEmailInput = document.getElementById('workitemEmailInput');
+    const workitemDescriptionInput = document.getElementById('workitemDescriptionInput');
+    const workitemVersionInput = document.getElementById('workitemVersionInput');
+
+    let debounceTimer;
+    let lastQuery = '';
+    let allWorkitems = [];
+    // Pagination constants
+    const MODAL_PAGE_SIZE = 10;
+    const SEARCH_PAGE_SIZE = 10;
+    let modalCurrentPage = 1;
+    let searchCurrentPage = 1;
+    let currentModalItems = [];
+    let currentSearchItems = [];
+
+    fetchAllWorkitems()
+        .then(workitems => {
+            allWorkitems = workitems;
+            console.log('Cached ' + workitems.length + ' workitems for faster searching');
+        })
+        .catch(error => {
+            console.error('Error pre-fetching workitems', error);
+        });
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        lastQuery = query;
+
+        clearTimeout(debounceTimer);
+        spinner.style.display = 'block';
+
+        debounceTimer = setTimeout(() => {
+            if (query === '') {
+                resultsContainer.style.display = 'none';
+                spinner.style.display = 'none';
+                searchCurrentPage = 1;
+                currentSearchItems = [];
+            } else {
+                if (allWorkitems.length > 0) {
+                    const filteredWorkitems = filterWorkitemsByName(allWorkitems, query);
+                    currentSearchItems = filteredWorkitems;
+                    renderSearchResults(currentSearchItems, query);
+                    resultsContainer.style.display = 'block';
+                    spinner.style.display = 'none';
+                } else {
+                    searchWorkitemsByName(query)
+                        .then(results => {
+                            currentSearchItems = results;
+                            renderSearchResults(currentSearchItems, query);
+                            resultsContainer.style.display = 'block';
+                            spinner.style.display = 'none';
+                        })
+                        .catch(error => {
+                            console.error('Error searching workitems', error);
+                            resultsContainer.innerHTML = `
+                                <div class="no-results">
+                                    <div>Error searching workitems. Please try again.</div>
+                                </div>
+                            `;
+                            resultsContainer.style.display = 'block';
+                            spinner.style.display = 'none';
+                        });
+                }
+            }
+        }, 300);
+    });
+
+    showAllBtn.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (allWorkitems.length > 0) {
+            const filteredWorkitems = filterWorkitemsByName(allWorkitems, query);
+            currentModalItems = filteredWorkitems;
+            openModalWithItems(currentModalItems, query);
+        } else {
+            fetchAllWorkitems()
+                .then(workitems => {
+                    allWorkitems = workitems;
+                    const filteredWorkitems = filterWorkitemsByName(workitems, query);
+                    currentModalItems = filteredWorkitems;
+                    openModalWithItems(currentModalItems, query);
+                })
+                .catch(error => {
+                    console.error('Error fetching all workitems', error);
+                    alert('Error fetching workitems. Please try again.');
+                });
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalOverlay.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    function openModalWithItems(workitems, query) {
+        modalCurrentPage = 1;
+        currentModalItems = workitems;
+        renderModalItems(workitems, query);
+        modalOverlay.style.display = 'flex';
+        modalOverlay.focus();
+        resultsContainer.style.display = 'none';
+    }
+
+    function renderModalItems(workitems, query) {
+        const totalPages = Math.ceil(workitems.length / MODAL_PAGE_SIZE);
+        const startIndex = (modalCurrentPage - 1) * MODAL_PAGE_SIZE;
+        const paginatedItems = workitems.slice(startIndex, startIndex + MODAL_PAGE_SIZE);
+
+        workitemsTableBody.innerHTML = '';
+
+        if (workitems.length === 0) {
+            workitemsTableBody.innerHTML = `
+                <tr><td colspan="4" class="no-results">No workitems found${query ? ` for "${query}"` : ''}.</td></tr>
+            `;
+        } else {
+            if (query) {
+                paginatedItems.sort((a, b) => 
+                    (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())
+                );
+            }
+            
+            paginatedItems.forEach(workitem => {
+                const row = document.createElement('tr');
+                row.tabIndex = 0;
+                row.innerHTML = `
+                    <td>${highlightMatch(escapeHtml(workitem.name || 'Unnamed Workitem'), query)}</td>
+                    <td>${escapeHtml(workitem.description || 'No Description')}</td>
+                    <td>${escapeHtml(workitem.email || 'No Email')}</td>
+                    <td>${escapeHtml(workitem.version || 'NA')}</td>
+                `;
+
+                row.addEventListener('click', () => {
+                    fillDetailInputs(workitem);
+                    closeModal();
+                    searchInput.value = workitem.name || '';
+                    resultsContainer.style.display = 'none';
+                    searchInput.focus();
+                });
+                row.addEventListener('keypress', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        row.click();
+                    }
+                });
+                workitemsTableBody.appendChild(row);
+            });
+        }
+
+        // Generate modal pagination controls
+        modalPagination.innerHTML = '';
+        if (totalPages > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '&lt;';
+            prevBtn.disabled = modalCurrentPage === 1;
+            prevBtn.addEventListener('click', () => {
+                if (modalCurrentPage > 1) {
+                    modalCurrentPage--;
+                    renderModalItems(currentModalItems, lastQuery);
+                }
+            });
+
+            const pageInfo = document.createElement('span');
+            pageInfo.className = 'page-info';
+            pageInfo.textContent = `${modalCurrentPage} of ${totalPages}`;
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '&gt;';
+            nextBtn.disabled = modalCurrentPage === totalPages;
+            nextBtn.addEventListener('click', () => {
+                if (modalCurrentPage < totalPages) {
+                    modalCurrentPage++;
+                    renderModalItems(currentModalItems, lastQuery);
+                }
+            });
+
+            modalPagination.appendChild(prevBtn);
+            modalPagination.appendChild(pageInfo);
+            modalPagination.appendChild(nextBtn);
+        }
+    }
+
+    function renderSearchResults(workitems, query) {
+        searchCurrentPage = 1;
+        updateSearchResults(workitems, query);
+    }
+    
+    function updateSearchResults(workitems, query) {
+        const totalPages = Math.ceil(workitems.length / SEARCH_PAGE_SIZE);
+        const startIndex = (searchCurrentPage - 1) * SEARCH_PAGE_SIZE;
+        const paginatedItems = workitems.slice(startIndex, startIndex + SEARCH_PAGE_SIZE);
+        
+        resultsContainer.innerHTML = '';
+
+        if (workitems.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <div>No workitems found${query ? ` for "${query}"` : ''}</div>
+                </div>
+            `;
+        } else {
+            if (query) {
+                paginatedItems.sort((a, b) => 
+                    (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())
+                );
+            }
+            
+            paginatedItems.forEach(workitem => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+
+                const name = workitem.name || 'Unnamed Workitem';
+                const email = workitem.email || 'No Email';
+                const description = workitem.description || 'No Description';
+                const version = workitem.version || 'NA';
+
+                const highlightedName = query ? highlightMatch(name, query) : name;
+
+                div.innerHTML = `
+                    <div class="autocomplete-item-name">${highlightedName}</div>
+                    <div class="autocomplete-item-details">
+                        <span>Email: ${email}</span>
+                        <span>Description: ${description}</span>
+                        <span>Version: ${version}</span>
+                    </div>
+                `;
+
+                div.addEventListener('click', () => {
+                    selectWorkitem(workitem);
+                    resultsContainer.style.display = 'none';
+                    searchInput.value = name;
+                });
+
+                resultsContainer.appendChild(div);
+            });
+            
+            // Add pagination controls to search results
+            if (totalPages > 1) {
+                const paginationDiv = document.createElement('div');
+                paginationDiv.className = 'pagination';
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'page-btn';
+                prevBtn.textContent = '<';
+                prevBtn.disabled = searchCurrentPage === 1;
+                prevBtn.addEventListener('click', () => {
+                    if (searchCurrentPage > 1) {
+                        searchCurrentPage--;
+                        updateSearchResults(currentSearchItems, lastQuery);
+                    }
+                });
+                
+                const pageInfo = document.createElement('span');
+                pageInfo.className = 'page-info';
+                pageInfo.textContent = `${searchCurrentPage} of ${totalPages}`;
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'page-btn';
+                nextBtn.textContent = '>';
+                nextBtn.disabled = searchCurrentPage === totalPages;
+                nextBtn.addEventListener('click', () => {
+                    if (searchCurrentPage < totalPages) {
+                        searchCurrentPage++;
+                        updateSearchResults(currentSearchItems, lastQuery);
+                    }
+                });
+                
+                paginationDiv.appendChild(prevBtn);
+                paginationDiv.appendChild(pageInfo);
+                paginationDiv.appendChild(nextBtn);
+                resultsContainer.appendChild(paginationDiv);
+            }
+        }
+        
+        resultsContainer.style.display = 'block';
+    }
+
+    // ... existing helper functions (fillDetailInputs, closeModal, etc.) ...
+    function fillDetailInputs(workitem) {
+        if (workitemIdInput) workitemIdInput.value = workitem.id || '';
+        if (workitemNameInput) workitemNameInput.value = workitem.name || '';
+        if (workitemEmailInput) workitemEmailInput.value = workitem.email || '';
+        if (workitemDescriptionInput) workitemDescriptionInput.value = workitem.description || '';
+        if (workitemVersionInput) workitemVersionInput.value = workitem.version || '';
+    }
+
+    function closeModal() {
+        modalOverlay.style.display = 'none';
+        modalCurrentPage = 1;
+    }
+
+    async function searchWorkitemsByName(query) {
+        try {
+            if (allWorkitems.length > 0) {
+                return filterWorkitemsByName(allWorkitems, query);
+            }
+
+            // In a real app, this would be your API endpoint
+            // const response = await fetch(`/api/search?name=${encodeURIComponent(query)}`);
+            // return await response.json();
+            
+            // For demo, return filtered dummy data
+            return allWorkitems.filter(item => 
+                (item.name || '').toLowerCase().includes(query.toLowerCase())
+            );
+        } catch (error) {
+            console.error('Error searching workitems', error);
+            throw error;
+        }
+    }
+
+    function filterWorkitemsByName(workitems, query) {
+        if (!query) return workitems;
+        const lowerQuery = query.toLowerCase();
+        return workitems.filter(workitem => 
+            (workitem.name || '').toLowerCase().includes(lowerQuery)
+        );
+    }
+
+    async function fetchAllWorkitems() {
+        try {
+            // In a real app, this would be your API endpoint
+            // const response = await fetch('/api/workitems');
+            // return await response.json();
+            
+            // Return dummy data for demo
+            return [
+                {id: 1, name: 'Project Alpha', description: 'Initial project setup', email: 'alpha@example.com', version: '1.0'},
+                {id: 2, name: 'Beta Release', description: 'Final testing phase', email: 'beta@example.com', version: '2.1'},
+                // ... more demo items ...
+            ];
+        } catch (error) {
+            console.error('Error fetching all workitems', error);
+            throw error;
+        }
+    }
+
+    function selectWorkitem(workitem) {
+        fillDetailInputs(workitem);
+    }
+
+    function highlightMatch(text, query) {
+        if (!query || !text) return text || '';
+        const escapedQuery = escapeRegExp(query);
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) &&
+            !resultsContainer.contains(e.target) &&
+            modalOverlay.style.display !== 'flex') {
+            resultsContainer.style.display = 'none';
+        }
+    });
+});
+</script>
+</body>
+</html>
