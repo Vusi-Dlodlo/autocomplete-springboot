@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bootstrap 3 Tooltip with API Call on Click</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { padding: 50px; }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .rotating {
+      animation: rotate 2s linear;
+    }
+
+    #refreshBtn {
+      font-size: 18px;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      text-align: center;
+    }
+
+    .glyphicon-ok {
+      color: #5cb85c;
+    }
+  </style>
+</head>
+<body>
+
+<button id="refreshBtn" type="button" class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="Refresh items" aria-label="Refresh">
+  <span class="glyphicon glyphicon-refresh"></span>
+</button>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+  $(function () {
+    var maxCalls = 3;
+    var callCount = 0;
+    var $btn = $('#refreshBtn');
+    var $icon = $btn.find('.glyphicon');
+    var isCalling = false; // Prevent multiple simultaneous calls
+
+    // Initialize tooltip
+    $btn.tooltip();
+
+    // Simulated API call (2 seconds delay)
+    function simulateApiCall() {
+      return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+          resolve("Success");
+          // reject("Error"); // Uncomment to simulate failure
+        }, 2000);
+      });
+    }
+
+    $btn.on('click', function () {
+      if ($btn.prop('disabled') || isCalling) return;
+
+      if (callCount >= maxCalls) {
+        // Just in case, disable button and update tooltip
+        $btn.prop('disabled', true);
+        $btn.attr('data-original-title', 'Maximum refresh rate reached').tooltip('fixTitle').tooltip('show');
+        return;
+      }
+
+      isCalling = true;
+      $btn.prop('disabled', true); // Disable button during API call
+
+      // Start rotating animation
+      $icon.removeClass().addClass('glyphicon glyphicon-refresh rotating');
+
+      simulateApiCall()
+        .then(function(response) {
+          callCount++;
+
+          // Stop rotating and show tick icon
+          $icon.removeClass().addClass('glyphicon glyphicon-ok');
+
+          // Update tooltip based on call count
+          if (callCount === 1) {
+            $btn.attr('data-original-title', '2 remaining');
+          } else if (callCount === 2) {
+            $btn.attr('data-original-title', '1 remaining');
+          } else if (callCount >= maxCalls) {
+            $btn.attr('data-original-title', 'Maximum refresh rate reached');
+          }
+          $btn.tooltip('fixTitle').tooltip('show');
+
+          // After 1 second show tick, then revert icon and re-enable or disable button
+          setTimeout(function () {
+            $icon.removeClass().addClass('glyphicon glyphicon-refresh');
+
+            if (callCount < maxCalls) {
+              $btn.prop('disabled', false);
+            } else {
+              $btn.prop('disabled', true);
+            }
+
+            isCalling = false;
+          }, 1000);
+        })
+        .catch(function(error) {
+          // Handle API failure: stop animation, show error tooltip, re-enable button
+          $icon.removeClass().addClass('glyphicon glyphicon-refresh');
+          $btn.attr('data-original-title', 'API call failed, try again').tooltip('fixTitle').tooltip('show');
+          $btn.prop('disabled', false);
+          isCalling = false;
+        });
+    });
+  });
+</script>
+
+</body>
+</html>
