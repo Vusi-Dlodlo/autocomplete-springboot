@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bootstrap 3 Tooltip with Animated Refresh and Tick</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    body { padding: 50px; }
+
+    /* Rotation animation */
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .rotating {
+      animation: rotate 2s linear;
+    }
+
+    /* Make the button smaller and icon centered */
+    #refreshBtn {
+      font-size: 18px;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      text-align: center;
+    }
+
+    /* Green tick color */
+    .glyphicon-ok {
+      color: #5cb85c; /* Bootstrap success green */
+    }
+  </style>
+</head>
+<body>
+
+<button id="refreshBtn" type="button" class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="Refresh items" aria-label="Refresh">
+  <span class="glyphicon glyphicon-refresh"></span>
+</button>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+  $(function () {
+    var maxClicks = 3;
+    var clickCount = 0;
+    var $btn = $('#refreshBtn');
+    var $icon = $btn.find('.glyphicon');
+
+    // Initialize tooltip
+    $btn.tooltip();
+
+    $btn.on('click', function () {
+      if ($btn.prop('disabled')) return; // Prevent clicks if disabled
+
+      clickCount++;
+
+      // Start rotation animation
+      $icon.removeClass().addClass('glyphicon glyphicon-refresh rotating');
+
+      // After 2 seconds (rotation done)
+      setTimeout(function () {
+        // Replace refresh icon with tick icon
+        $icon.removeClass().addClass('glyphicon glyphicon-ok');
+
+        // After 1 second show tick
+        setTimeout(function () {
+          // Return to refresh icon (no animation)
+          $icon.removeClass().addClass('glyphicon glyphicon-refresh');
+        }, 1000);
+      }, 2000);
+
+      // Update tooltip text
+      if (clickCount === 1) {
+        $btn.attr('data-original-title', '2 remaining').tooltip('fixTitle').tooltip('show');
+      } else if (clickCount === 2) {
+        $btn.attr('data-original-title', '1 remaining').tooltip('fixTitle').tooltip('show');
+      } else if (clickCount >= maxClicks) {
+        $btn.attr('data-original-title', 'Maximum refresh rate reached').tooltip('fixTitle').tooltip('show');
+        $btn.prop('disabled', true);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
