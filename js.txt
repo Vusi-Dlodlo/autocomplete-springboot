@@ -1,0 +1,749 @@
+package za.co.fnb.gts.pepv3.console.pepv3selfservice.controller;
+
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.velocity.exception.ResourceNotFoundException;
+import org.hibernate.jdbc.Work;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.common.ApiCommonFunctions;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.common.AuthCommonFunctions;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.exception.IntegrationException;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.model.*;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.repository.*;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.security.PSSAuthentication;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.service.ApiRequestValidator;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.service.DeleteServiceImpl;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.service.GetSwaggerService;
+import za.co.fnb.gts.pepv3.console.pepv3selfservice.service.RequestService;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static za.co.fnb.gts.pepv3.console.pepv3selfservice.common.PepSelfServiceConstants.*;
+
+@Controller
+@Slf4j
+public class ApiController extends ApiCommonFunctions {
+
+    @Autowired
+    private AuthCommonFunctions authCommonFunctions;
+
+    @Autowired
+    private ApiDetailsRepository apiDetailsRepository;
+
+    @Autowired
+    WorkItemRepository workItemRepository;
+
+    @Autowired
+    private AddApiRepository addApiRepository;
+
+    @Autowired
+    private GetSwaggerService getSwaggerService;
+
+    @Autowired
+    private RequestService requestService;
+
+    @Autowired
+    private DeleteServiceImpl deleteService;
+
+    @Value("${pepv3SelfService.workingDirectory}")
+    private String workingDirectory;
+
+    @Value("${pepv3SelfService.swaggerDirectory}")
+    private String swaggerDirectory;
+
+    @InitBinder("apiRequest")
+    protected void initBinder(WebDataBinder binder) {
+        binder.addValidators(new ApiRequestValidator());
+    }
+
+    private SimpleDateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy HH:mm ");
+
+    @RequestMapping(value = {"/api"}, method = RequestMethod.GET)
+    public String showOperation(Model model, PSSAuthentication pssAuthentication, HttpSession session, RedirectAttributes redirectAttributes,
+                                @RequestParam(value = "api", required = false) String api,
+                                @RequestParam(value = "apiDescription", required = false) String apiDescription,
+                                @RequestParam(value = "personalInfo", required = false) String personalInfo,
+                                @RequestParam(value = "specialPersonalInfo", required = false) String specialPersonalInfo,
+                                @RequestParam(value = "cardInfo", required = false) String cardInfo,
+                                @RequestParam(value = "updateApiinfo", required = false) String updateApiinfo,
+                                @RequestParam(value = "systemName", required = false) String systemName,
+                                @RequestParam(value = "caller", required = false) String caller,
+                                @RequestParam(value = "deleteAPI", required = false) boolean deleteAPI,
+                                @RequestParam(value = "sendDeleteAPINotification", required = false) boolean sendDeleteAPINotification,
+                                @RequestParam(value = "deleteAPIReason", required = false) String deleteAPIReason,
+                                @RequestParam(value = "version", required = true) String version,
+                                @RequestParam(value = "viewConsumerApi", required = false) String viewConsumerApi,
+                                @RequestParam(value = "classification", required = false) String classification,
+                                @RequestParam(value = "status", required = false) String status,
+                                @RequestParam(value = "workitemid", required = false)String workItemId) {
+
+        try {
+            //Set User System and Roles
+            String userSystem = authCommonFunctions.setUserSystemAccess(pssAuthentication.getAuthentication(), model, session, pssAuthentication.getUserAccess(),
+                    pssAuthentication.getSystemNames(), systemName, pssAuthentication.getName(), pssAuthentication.getUserName());
+
+            //Set Attributes
+            if(!version.equals(API_ALL_VERSIONS))//change api to selected version
+                api = String.format("%s/%s", stripVersion(api), version.toLowerCase());
+            model.addAttribute("api", api);
+            model.addAttribute("caller", caller);
+            model.addAttribute("isNoRole", false);
+            model.addAttribute("systemName", systemName);
+            model.addAttribute("reasonList", DELETE_API_COMMON_REASONS);
+            model.addAttribute("selectedVersion", version.trim().equals(API_ALL_VERSIONS) ? version : version.toUpperCase());
+
+            Boolean loggedInFlag = (boolean) session.getAttribute("loggedInFlag");
+            session.setAttribute("ViewedReleasePlan", false);
+
+            model.addAttribute("loggedInFlag", loggedInFlag);
+
+            String[] endpointParts = api.replaceFirst("/", "").split("/");
+            if (endpointParts.length == 4) {
+                model.addAttribute("apiSystem", api.split("/")[1]);
+
+                setSystemDetails(model, api.split("/")[1]);
+            }
+
+            //Set API Description
+            model.addAttribute("apiDesc", apiDescription);
+
+            //Set Field(API without Version) Attribute
+            model.addAttribute("field", version.trim().equals(API_ALL_VERSIONS)? stripVersion(api) : api);
+
+            model.addAttribute("apiRequest", new ApiRequest());
+
+            //Fetch API Info from Repository
+            ApiDetails apiDetail = fetchApiDetails(api);
+
+            //update Api info
+            if (updateApiinfo != null) {
+                if (apiDetail.getDescriptionStatus() == null && status == null) {
+                    model.addAttribute("errorMessage", VERIFY_STATUS_EMPTY_ERROR_MESSAGE);
+                } else if (apiDescription.isEmpty() || apiDescription == null) {
+                    model.addAttribute("errorMessage", API_DESC_EMPTY_ERROR_MESSAGE);
+                } else if (personalInfo.equalsIgnoreCase("undefined")) {
+                    model.addAttribute("errorMessage", API_PI_EMPTY_ERROR_MESSAGE);
+                } else if (specialPersonalInfo.equalsIgnoreCase("undefined")) {
+                    model.addAttribute("errorMessage", API_SPI_EMPTY_ERROR_MESSAGE);
+                } else if (cardInfo.equalsIgnoreCase("undefined")) {
+                    model.addAttribute("errorMessage", API_PCI_EMPTY_ERROR_MESSAGE);
+                } else if (classification.equalsIgnoreCase(API_CLASSIFICATION_NOT_SELECTED)) {
+                    model.addAttribute("errorMessage", API_CLASSIFICATION_EMPTY_ERROR_MESSAGE);
+                }
+                else {
+                    try {
+                        updateApiDetailsTable(apiDetail.getId(), apiDescription, personalInfo, specialPersonalInfo, cardInfo, classification,status, workItemId);
+                    } catch (Exception e) {
+                        log.error(ERROR_STATUS_CODE, e);
+                        model.addAttribute("errorMessage", API_UPDATE_ERROR_MESSAGE);
+                    }
+                }
+            }
+
+
+            ApiPageItem apiPageInfo = new ApiPageItem(api, apiDetail.getDescription(), apiDetail.getPersonalInfo(), apiDetail.getSpecialPersonalInfo(), apiDetail.getCardInfo(),apiDetail.getDescriptionStatus(),apiDetail.getAiDescription(), apiDetail.getWorkItemId());
+
+            Map<String, PepConfiguration> pepConfigMap = getAllPepConfigMap();
+
+            List<String> futureEndpoints = fetchDisplayEndpoints(pepConfigMap.get(DEV_ENVIRONMENT), api, version);
+            List<String> prodEndpoints = fetchDisplayEndpoints(pepConfigMap.get(PROD_ENVIRONMENT), api, version);
+            model.addAttribute("versionList", retrieveVersionDropDown(pepConfigMap.get(DEV_ENVIRONMENT), api));
+
+            futureEndpoints = removeProdVersions(prodEndpoints, futureEndpoints);
+
+            String swaggerPath = String.format("%s/%s/", String.format(workingDirectory, org.apache.commons.lang3.StringUtils.lowerCase(SWAGGER_DOCS_BRANCH)), swaggerDirectory);
+
+            List<ApiStatusItem> apiStableList;
+            List<ApiStatusItem> apiFutureList;
+
+            if (pepConfigMap.get(DEV_ENVIRONMENT) != null) {
+                apiStableList = setEnvironmentAvailability(prodEndpoints, pepConfigMap, swaggerPath);
+                getEnvironmentPushDates(apiStableList);
+
+                apiFutureList = setEnvironmentAvailability(futureEndpoints, pepConfigMap, swaggerPath);
+                getEnvironmentPushDates(apiFutureList);
+            } else {
+                throw new IntegrationException(FILE_LOAD_ERROR_MESSAGE, ERROR_STATUS_CODE);
+            }
+
+            //Set API Status Attributes
+            model.addAttribute("stable", apiStableList);
+            model.addAttribute("future", apiFutureList);
+            String providerName = api.split("/")[1];
+
+            //Get consumers for each APIVersion
+            Map<String, Set<String>> endpointsConsumers = setConsumersForEachVersion(pepConfigMap, apiStableList, apiFutureList, model, viewConsumerApi);
+
+            if(sendDeleteAPINotification){
+                boolean deleteNotificationSent = false;
+                for (String consumer : endpointsConsumers.get(api)) {
+                    //send mail to consumers to inform of delete intent
+                    try {
+                        sendSystemHTMLMail(consumer, String.format(DELETE_API_NOTIFICATION_MAIL_SUBJECT, providerName, api),
+                                String.format(DELETE_API_NOTIFICATION_MAIL_BODY, providerName, api, deleteAPIReason));
+                        deleteNotificationSent = true;
+                    } catch (Exception e) {
+                        log.error(ERROR_STATUS_CODE, e);
+                    }
+                }
+                if(deleteNotificationSent)
+                {
+                    model.addAttribute("success", "Delete API Email Notification successfully sent.");
+                }
+                else {
+                    model.addAttribute("errorMessage", String.format(ERROR_SENDING_EMAIL_TO_USER_MESSAGE, "consumers"));
+                }
+            }
+
+            if(deleteAPI){
+                    try {
+                        CreateGenResponseProcessor deleteAPIProcessor = deleteService.removeRoute(pssAuthentication.getName(),"all", api, providerName);
+
+                        if (deleteAPIProcessor.getStatusCode() != SUCCESS_STATUS_CODE) {
+                            model.addAttribute("errorMessage", deleteAPIProcessor.getStatusMessage());
+                        } else {
+                            redirectAttributes.addFlashAttribute("apiSuccess", String.format(DELETE_API_NOTIFICATION_MESSAGE, api));
+                            return "redirect:/my-services?systemName="+providerName;
+                        }
+                    } catch (Exception e) {
+                        log.error(ERROR_STATUS_CODE, e);
+                        model.addAttribute("errorMessage", String.format(DELETE_API_FAILURE_NOTIFICATION_MESSAGE, api));
+                    }
+            }
+
+            //Set API Page Attributes
+            model.addAttribute("service", apiPageInfo);
+
+            model.addAttribute("userAuthorized", isUserAuthorisedForEnvironmentsAndSystem((String) session.getAttribute("requesterName"),DEV_ENVIRONMENT, api.split("/")[1]));
+
+            Boolean isEndpointSystemUser = false;
+            if (!isSuperUser(pssAuthentication.getName())) {
+                if (userSystem.equalsIgnoreCase(api.split("/")[1])) {
+                    isEndpointSystemUser = true;
+                }
+            }
+            model.addAttribute("isEndpointSystemUser", isEndpointSystemUser);
+            setClassificationAttributes(model, api, isEndpointSystemUser, isSuperUser(pssAuthentication.getName()));
+            setWorkItemAttributes(model, api, isEndpointSystemUser, isSuperUser(pssAuthentication.getName()));
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            setUIExceptionResponse(e, model);
+        }
+        return "api";
+    }
+
+    @RequestMapping(value = {"/api-norole"}, method = RequestMethod.GET)
+    public String showOperationNoRole(Model model, HttpSession session,
+                                      @RequestParam(value = "api", required = false) String api,
+                                      @RequestParam(value = "apiDescription", required = false) String apiDescription,
+                                      @RequestParam(value = "systemName", required = false) String systemName,
+                                      @RequestParam(value = "version", required = true) String version,
+                                      @RequestParam(value = "viewConsumerApi", required = false) String viewConsumerApi) {
+
+
+        try {
+
+            //Set Attributes
+            model.addAttribute("api", api);
+            model.addAttribute("isNoRole", true);
+            model.addAttribute("systemName", systemName);
+            model.addAttribute("selectedVersion", version.trim().equals(API_ALL_VERSIONS) ? version : version.toUpperCase());
+
+            Boolean loggedInFlag = (boolean) session.getAttribute("loggedInFlag");
+
+            model.addAttribute("loggedInFlag", loggedInFlag);
+
+            setClassificationAttributes(model, api, false, false);
+            setWorkItemAttributes(model, api, false, false);
+
+            String[] endpointParts = api.replaceFirst("/", "").split("/");
+            if (endpointParts.length == 4) {
+                model.addAttribute("apiSystem", api.split("/")[1]);
+
+                setSystemDetails(model, api.split("/")[1]);
+            }
+
+            //Set API Description
+            model.addAttribute("apiDesc", apiDescription);
+
+            //Set Field(API without Version) Attribute
+            model.addAttribute("field", version.trim().equals(API_ALL_VERSIONS)? stripVersion(api) : api);
+
+            model.addAttribute("apiRequest", new ApiRequest());
+
+            //Fetch API Info from Repository
+            ApiDetails apiDetail = fetchApiDetails(api);
+
+            ApiPageItem apiPageInfo = new ApiPageItem(api, apiDetail.getDescription(), apiDetail.getPersonalInfo(), apiDetail.getSpecialPersonalInfo(), apiDetail.getCardInfo(),apiDetail.getDescriptionStatus(),null, apiDetail.getWorkItemId());
+
+            Map<String, PepConfiguration> pepConfigMap = getAllPepConfigMap();
+
+            List<String> futureEndpoints = fetchDisplayEndpoints(pepConfigMap.get(DEV_ENVIRONMENT), api, version);
+            List<String> prodEndpoints = fetchDisplayEndpoints(pepConfigMap.get(PROD_ENVIRONMENT), api, version);
+
+            model.addAttribute("versionList", retrieveVersionDropDown(pepConfigMap.get(DEV_ENVIRONMENT), api));
+
+            futureEndpoints = removeProdVersions(prodEndpoints, futureEndpoints);
+
+            String swaggerPath = String.format("%s/%s/", String.format(workingDirectory, org.apache.commons.lang3.StringUtils.lowerCase(SWAGGER_DOCS_BRANCH)), swaggerDirectory);
+
+            List<ApiStatusItem> apiStableList;
+            List<ApiStatusItem> apiFutureList;
+            if (pepConfigMap.get(DEV_ENVIRONMENT) != null) {
+                apiStableList = setEnvironmentAvailability(prodEndpoints, pepConfigMap, swaggerPath);
+                getEnvironmentPushDates(apiStableList);
+
+                apiFutureList = setEnvironmentAvailability(futureEndpoints, pepConfigMap, swaggerPath);
+                getEnvironmentPushDates(apiFutureList);
+            } else {
+                throw new IntegrationException(FILE_LOAD_ERROR_MESSAGE, ERROR_STATUS_CODE);
+            }
+
+            setConsumersForEachVersion(pepConfigMap, apiStableList, apiFutureList, model, viewConsumerApi);
+
+            //Set API Status Attributes
+            model.addAttribute("stable", apiStableList);
+            model.addAttribute("future", apiFutureList);
+
+            //Set API Page Attributes
+            model.addAttribute("service", apiPageInfo);
+
+            model.addAttribute("isEndpointSystemUser", false);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            setUIExceptionResponse(e, model);
+        }
+        return "api";
+    }
+
+    private void setClassificationAttributes(Model model, String api, Boolean isEndpointSystemUser, Boolean isSuperUser){
+        model.addAttribute("classificationList", API_CLASSIFICATIONS);
+        ApiDetails detail = apiDetailsRepository.findByEndPointIgnoreCaseAndConfigured(api, 'Y');
+        if (detail != null && detail.getApiClassification() != null)
+            model.addAttribute("selectedClassification", detail.getApiClassification());
+        else {
+            if(isEndpointSystemUser || isSuperUser)
+                model.addAttribute("selectedClassification", API_CLASSIFICATION_NOT_SELECTED);
+            else
+                model.addAttribute("selectedClassification", API_CLASSIFICATION_NOT_SELECTED_NOROLE);
+        }
+    }
+    private void setWorkItemAttributes(Model model, String api, Boolean isEndpointSystemUser, Boolean isSuperUser) {
+        ApiDetails detail = apiDetailsRepository.findByEndPointIgnoreCaseAndConfigured(api, 'Y');
+        if (detail != null && detail.getWorkItemId() != null) {
+            model.addAttribute("selectedWorkItem", detail.getWorkItemId());
+        }
+    }
+
+    private Map<String, Set<String>> setConsumersForEachVersion(Map<String, PepConfiguration> pepConfigMap, List<ApiStatusItem> apiStableList, List<ApiStatusItem> apiFutureList, Model model, String viewConsumerApi){
+        //Get consumers for each APIVersion
+        Map<String, Set<String>> endpointsConsumers = new HashMap<>();
+        for (ApiStatusItem apiName :apiStableList) {
+            Set<String> versionedAPIConsumerNames;
+            versionedAPIConsumerNames = getVersionConsumers(pepConfigMap, apiName.getEndPoint(), true);
+            if (!versionedAPIConsumerNames.isEmpty()) {
+                endpointsConsumers.put(apiName.getEndPoint(), versionedAPIConsumerNames);
+            }
+        }
+        for (ApiStatusItem apiName :apiFutureList) {
+            Set<String> versionedAPIConsumerNames;
+            versionedAPIConsumerNames = getVersionConsumers(pepConfigMap, apiName.getEndPoint(), false);
+            if (!versionedAPIConsumerNames.isEmpty()) {
+                endpointsConsumers.put(apiName.getEndPoint(), versionedAPIConsumerNames);
+            }
+        }
+        model.addAttribute("endpointsConsumers",endpointsConsumers);
+
+        if (viewConsumerApi != null) {//fetch popup details
+            model.addAttribute("popConsumers", getApiConsumersDetails(endpointsConsumers.get(viewConsumerApi) != null ? endpointsConsumers.get(viewConsumerApi) : Collections.emptySet(), pepConfigMap, viewConsumerApi));
+            model.addAttribute("consumedApi", viewConsumerApi);
+        }
+        return endpointsConsumers;
+    }
+
+    private List<String[]> getApiConsumersDetails(Set<String> consumers, Map<String, PepConfiguration> pepConfigMap, String api){
+        List<String[]> consumerPopupDetails = new ArrayList<>();
+        for (String consumer : consumers){
+            String[] consumerDetail = new String[]{consumer, "", "", ""};
+            consumerDetail[3] = searchEnvironments(pepConfigMap, api, consumer);
+            PEPSystemDetail pepSystemDetail = getPepSystemDetail(consumer);
+            if (pepSystemDetail.getPepSystem() != null) {
+                consumerDetail[1] = pepSystemDetail.getWwApplication().getBusinessUnit();
+                consumerDetail[2] = pepSystemDetail.getPepSystem().getClassification().equals("application") ? pepSystemDetail.getWwApplication().getName() : pepSystemDetail.getWwComponent().getName();
+            }
+            consumerPopupDetails.add(consumerDetail);
+        }
+        return consumerPopupDetails;
+    }
+
+    private String searchEnvironments(Map<String, PepConfiguration> pepConfigMap, String endpoint, String consumerName){
+        if (highestConsumingEnvironment(pepConfigMap.get(PROD_ENVIRONMENT), endpoint, consumerName))
+            return PROD_ENVIRONMENT;
+        else if(highestConsumingEnvironment(pepConfigMap.get(STRESS_ENVIRONMENT), endpoint, consumerName))
+            return STRESS_ENVIRONMENT;
+        else if(highestConsumingEnvironment(pepConfigMap.get(QA_ENVIRONMENT), endpoint, consumerName))
+            return QA_ENVIRONMENT;
+        else if(highestConsumingEnvironment(pepConfigMap.get(INT_ENVIRONMENT), endpoint, consumerName))
+            return INT_ENVIRONMENT;
+        else
+            return DEV_ENVIRONMENT;
+    }
+
+    private boolean highestConsumingEnvironment(PepConfiguration pepConfiguration, String endpoint, String consumeName) {
+
+        String strippedEndpoint = endpoint.substring(1);
+        String groupName = StringUtils.replace(strippedEndpoint, "/", ".");
+
+        Set<String> apiConsumers = new HashSet<>();
+        for (Consumer consumer : pepConfiguration.getConsumers()) {
+            if(consumer.getUsername().equals(consumeName)){
+                for (Acl acl : consumer.getAcls()) {
+                    String group = acl.getGroup();
+                    if (group != null && !group.isEmpty()) {
+                        if (group.equals(groupName)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+        }
+        return false;
+    }
+
+    private void setSystemDetails(Model model, String systemName) throws IntegrationException {
+
+        //Fetch system details
+        PEPSystemDetail pepSystemDetail = getPepSystemDetail(systemName);
+
+        if (pepSystemDetail.getPepSystem() != null) {
+            model.addAttribute("wwShortCode", systemName);
+            model.addAttribute("businessUnit", pepSystemDetail.getWwApplication().getBusinessUnit());
+            model.addAttribute("dlEmail", pepSystemDetail.getPepSystem().getEmailAddress());
+            model.addAttribute("subBusinessUnit", pepSystemDetail.getWwApplication().getSubBusinessUnit());
+            model.addAttribute("wwSystemName", pepSystemDetail.getPepSystem().getClassification().equals("application") ? pepSystemDetail.getWwApplication().getName() : pepSystemDetail.getWwComponent().getName());
+        }
+    }
+
+    @RequestMapping(value = {"/api"}, method = RequestMethod.POST)
+    public String apiRequest(Model model, BindingResult bindingResult, HttpSession session, PSSAuthentication pssAuthentication,
+                             @RequestParam(value = "api", required = false) String api,
+                             @RequestParam(value = "systemName", required = false) String systemName) {
+        try {
+            //Set User System and Roles
+            authCommonFunctions.setUserSystemAccess(pssAuthentication.getAuthentication(), model, session, pssAuthentication.getUserAccess(),
+                    pssAuthentication.getSystemNames(), systemName, pssAuthentication.getName(), pssAuthentication.getUserName());
+
+            if (bindingResult.hasErrors()) {
+                return "api";
+            }
+
+            model.addAttribute("api", api);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            bindingResult.addError(new ObjectError("unexpected", e.getMessage()));
+            e.printStackTrace();
+        }
+        return "api";
+    }
+
+    @RequestMapping(value = {"/download-swagger"}, method = RequestMethod.GET)
+    public String declineOperation(HttpSession session, PSSAuthentication pssAuthentication,
+                                   HttpServletResponse response, Model model,
+                                   @RequestParam(value = "api", required = false) String api) {
+
+        try {
+            //Set User System and Roles
+            authCommonFunctions.setUserSystemAccess(pssAuthentication.getAuthentication(), model, session, pssAuthentication.getUserAccess(),
+                    pssAuthentication.getSystemNames(), pssAuthentication.getSystemName(), pssAuthentication.getName(), pssAuthentication.getUserName());
+
+            String providerName = api.split("/")[1];
+
+            getSwaggerService.getSwaggerService(pssAuthentication.getName(), providerName, api, response);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            setUIExceptionResponse(e, model);
+        }
+        return "redirect:/api";
+    }
+
+    @RequestMapping(value = {"/download-swagger-norole"}, method = RequestMethod.GET)
+    public String declineOperationNoRole(HttpSession session,
+                                         HttpServletResponse response, Model model,
+                                         @RequestParam(value = "api", required = false) String api) {
+
+        try {
+
+            String providerName = api.split("/")[1];
+
+            getSwaggerService.getSwaggerService("NoRole", providerName, api, response);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            setUIExceptionResponse(e, model);
+        }
+        return "redirect:/api";
+    }
+
+
+//    private void populateBadgeAttributes(Model model, Integer totalConsumers, String consumerNames) {
+//        model.addAttribute("consumersHoverbadge", consumerNames);
+//        model.addAttribute("totalConsumers", totalConsumers);
+//    }
+
+    private Boolean setEndpointEnv(List<Route> routes, String api) {
+        return apiExist(operationAsString(routes), api);
+    }
+
+    private Boolean apiExist(List<String> urls, String api) {
+        for (String url : urls) {
+            url = url.replace("[", "");
+            url = url.replace("]", "");
+
+            if (url.contains(","))
+            {
+                for (String path : url.split(","))
+                {
+                    if (path.trim().equals(api))
+                    {
+                        return true;
+                    }
+                }
+            }
+            if (url.equals(api)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Set<String> calculateTotalConsumers(PepConfiguration pepConfiguration, String endpoint) {
+
+        String strippedEndpoint = endpoint.substring(1);
+        String groupName = StringUtils.replace(strippedEndpoint, "/", ".");
+
+        Set<String> apiConsumers = new HashSet<>();
+        for (Consumer consumer : pepConfiguration.getConsumers()) {
+            for (Acl acl : consumer.getAcls()) {
+                String group = acl.getGroup();
+                if (group != null && !group.isEmpty()) {
+                    if (group.equals(groupName)) {
+                        apiConsumers.add(consumer.getUsername());
+                    }
+                }
+            }
+        }
+        return apiConsumers;
+    }
+
+    private Set<String> getVersionConsumers(Map<String, PepConfiguration> pepConfigMap, String endpoint, boolean prodEndpoint){
+        Set<String> apiVersionConsumers = new HashSet<>();
+        apiVersionConsumers.addAll(calculateTotalConsumers(pepConfigMap.get(DEV_ENVIRONMENT), endpoint));
+        apiVersionConsumers.addAll(calculateTotalConsumers(pepConfigMap.get(INT_ENVIRONMENT), endpoint));
+        apiVersionConsumers.addAll(calculateTotalConsumers(pepConfigMap.get(QA_ENVIRONMENT), endpoint));
+        apiVersionConsumers.addAll(calculateTotalConsumers(pepConfigMap.get(STRESS_ENVIRONMENT), endpoint));
+        if (prodEndpoint)
+            apiVersionConsumers.addAll(calculateTotalConsumers(pepConfigMap.get(PROD_ENVIRONMENT), endpoint));
+        return apiVersionConsumers;
+    }
+
+    private String createConsumersString(Set<String> consumerNames) {
+        StringBuilder apiConsumers = new StringBuilder();
+
+        Set<String> sortedSet = new TreeSet<>(consumerNames);
+        for (String consumerName : sortedSet) {
+            apiConsumers.append(consumerName).append(", ");
+        }
+
+        return StringUtils.substringBeforeLast(apiConsumers.toString(), ", ");
+    }
+
+    private List<String> removeProdVersions(List<String> prodEndpoints, List<String> futureEndpoints) {
+        String endpoint;
+
+        for (int i = 0; i < prodEndpoints.size(); i++) {
+            for (int j = 0; j < futureEndpoints.size(); j++) {
+                if (futureEndpoints.get(j).equals(prodEndpoints.get(i))) {
+                    endpoint = futureEndpoints.get(j);
+                    futureEndpoints.remove(endpoint);
+                }
+            }
+        }
+        return futureEndpoints;
+    }
+
+    private void updateApiDetailsTable(Long requestId, String description, String personalInfo, String specialPersonalInfo, String cardInfo, String classification,String status, String workItemID) throws Exception {
+        ApiDetails apiList = apiDetailsRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException(API_INFO_UPDATE));
+        Optional<WorkItem> workItem = workItemRepository.findByWiIdentifier(workItemID);
+        apiList.setDescription(description);
+        apiList.setPersonalInfo(personalInfo);
+        apiList.setSpecialPersonalInfo(specialPersonalInfo);
+        apiList.setCardInfo(cardInfo);
+        apiList.setApiClassification(classification);
+        apiList.setWorkItemId(workItem.get());
+        if(status != null && status.equalsIgnoreCase("verified")){
+            apiList.setDescriptionStatus(status);
+        }
+        apiDetailsRepository.save(apiList);
+    }
+
+    private List<String> fetchDisplayEndpoints(PepConfiguration pepConfiguration, String endpoint, String version) throws IntegrationException {
+        List<String> endpoints;
+        List<Route> routes;
+
+        if (pepConfiguration != null) {
+            routes = pepConfiguration.getRoutes();
+            endpoints = version.trim().equals(API_ALL_VERSIONS) ? fetchEndpoints(routes, stripVersion(endpoint), false) : fetchEndpoint(routes, endpoint);
+        } else {
+            log.error("ApiController - Error loading DEV Config File.");
+            throw new IntegrationException(FILE_LOAD_ERROR_MESSAGE, ERROR_STATUS_CODE);
+        }
+        return endpoints;
+    }
+
+    private List<ApiStatusItem> setEnvironmentAvailability(List<String> endpoints, Map<String, PepConfiguration> pepConfigMap, String swaggerPath) {
+        List<ApiStatusItem> apiList = new ArrayList<>();
+        String providerName = null, serviceName = null, operationName = null, version = null, api;
+        if (!endpoints.isEmpty()) {
+
+            for (String endpoint : endpoints) {
+                if (endpoint.split("/").length == 6){
+                    providerName = endpoint.split("/")[1];
+                    serviceName = endpoint.split("/")[3];
+                    operationName = endpoint.split("/")[4];
+                    version = endpoint.split("/")[5];
+                }
+                else{
+                        providerName = endpoint.split("/")[1];
+                        serviceName = endpoint.split("/")[2];
+                        operationName = endpoint.split("/")[3];
+                        version = endpoint.split("/")[4];
+                }
+
+                File swaggerFile = new File(swaggerPath + providerName + File.separator + serviceName + File.separator + operationName + File.separator + operationName + "_" + version);
+
+                Boolean devFlag = setEndpointEnv(pepConfigMap.get(DEV_ENVIRONMENT).getRoutes(), endpoint);
+                Boolean intFlag = setEndpointEnv(pepConfigMap.get(INT_ENVIRONMENT).getRoutes(), endpoint);
+                Boolean qaFlag = setEndpointEnv(pepConfigMap.get(QA_ENVIRONMENT).getRoutes(), endpoint);
+                Boolean stressFlag = setEndpointEnv(pepConfigMap.get(STRESS_ENVIRONMENT).getRoutes(), endpoint);
+                Boolean prodFlag = setEndpointEnv(pepConfigMap.get(PROD_ENVIRONMENT).getRoutes(), endpoint);
+
+                ApiStatusItem listStableApi = new ApiStatusItem(
+                        endpoint,
+                        true,
+                        devFlag,
+                        intFlag,
+                        qaFlag,
+                        stressFlag,
+                        prodFlag,
+                        swaggerFile.exists()
+                );
+                apiList.add(listStableApi);
+            }
+        }
+        return apiList;
+    }
+
+    private void getEnvironmentPushDates(List<ApiStatusItem> apiStatusItemList) {
+
+        for (ApiStatusItem apiStatusItem : apiStatusItemList) {
+            List<AddApi> addPepSelfServices = addApiRepository.findAllByServiceNameAndConfiguredNullOrConfigured(apiStatusItem.getEndPoint(), 'Y');
+            if (addPepSelfServices != null) {
+                for (AddApi addPepSelfService : addPepSelfServices) {
+                    switch (addPepSelfService.getEnvironment()) {
+                        case (DEV_ENVIRONMENT):
+                            apiStatusItem.setDevPushDate(formatter.format(addPepSelfService.getDateCreated()));
+                            apiStatusItem.setDevPushUser(addPepSelfService.getCreatedBy());
+                            break;
+                        case (INT_ENVIRONMENT):
+                            apiStatusItem.setIntPushDate(formatter.format(addPepSelfService.getDateCreated()));
+                            apiStatusItem.setIntPushUser(addPepSelfService.getCreatedBy());
+                            break;
+                        case (QA_ENVIRONMENT):
+                            apiStatusItem.setQaPushDate(formatter.format(addPepSelfService.getDateCreated()));
+                            apiStatusItem.setQaPushUser(addPepSelfService.getCreatedBy());
+                            break;
+                        case (STRESS_ENVIRONMENT):
+                            apiStatusItem.setStressPushDate(formatter.format(addPepSelfService.getDateCreated()));
+                            apiStatusItem.setStressPushUser(addPepSelfService.getCreatedBy());
+                            break;
+                        case (PROD_ENVIRONMENT):
+                            apiStatusItem.setProdPushDate(formatter.format(addPepSelfService.getDateCreated()));
+                            apiStatusItem.setProdPushUser(addPepSelfService.getCreatedBy());
+                            break;
+                    }
+                }
+            }
+            //Check if environment push dates are not null
+            checkEnvironmentPushDatedNotNull(apiStatusItem);
+        }
+    }
+
+    private void checkEnvironmentPushDatedNotNull(ApiStatusItem apiStatusItem) {
+        if (apiStatusItem.getDevPushDate() == null) {
+            apiStatusItem.setDevPushDate("");
+        }
+        if (apiStatusItem.getIntPushDate() == null) {
+            apiStatusItem.setIntPushDate("");
+        }
+        if (apiStatusItem.getQaPushDate() == null) {
+            apiStatusItem.setQaPushDate("");
+        }
+        if (apiStatusItem.getStressPushDate() == null) {
+            apiStatusItem.setStressPushDate("");
+        }
+        if (apiStatusItem.getProdPushDate() == null) {
+            apiStatusItem.setProdPushDate("");
+        }
+        //Set null user field to empty
+        if (apiStatusItem.getDevPushUser() == null) {
+            apiStatusItem.setDevPushUser("");
+        }
+        if (apiStatusItem.getIntPushUser() == null) {
+            apiStatusItem.setIntPushUser("");
+        }
+        if (apiStatusItem.getQaPushUser() == null) {
+            apiStatusItem.setQaPushUser("");
+        }
+        if (apiStatusItem.getStressPushUser() == null) {
+            apiStatusItem.setStressPushUser("");
+        }
+        if (apiStatusItem.getProdPushUser() == null) {
+            apiStatusItem.setProdPushUser("");
+        }
+    }
+
+    private List<String> retrieveVersionDropDown(PepConfiguration pepConfiguration, String api){
+        List<String> endpoints = null;
+
+        if (pepConfiguration != null) {
+            endpoints = fetchEndpoints(pepConfiguration.getRoutes(), stripVersion(api), true);
+            Collections.sort(endpoints, Collections.reverseOrder());
+            endpoints.add(API_ALL_VERSIONS);
+        }
+        return endpoints;
+    }
+}
+
+
+
+
