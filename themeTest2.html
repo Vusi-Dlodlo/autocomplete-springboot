@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <!-- Default theme; change to 'dark', 'orange', or 'teal' -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bootstrap 3.4.1 Themed Layout with Animated Theme Icon</title>
+
+    <!-- Bootstrap 3.4.1 CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome CDN for icons -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ===== Your Provided Variables ===== */
+      :root {
+        --brand-orange-700: #ea5a24;
+        --brand-orange-600: #ef7726;
+        --brand-orange-500: #f59c23;
+        --brand-black: #000000;
+        --brand-white: #ffffff;
+
+        --brand-gradient-1: #ea5a24;
+        --brand-gradient-2: #ef7726;
+        --brand-gradient-3: #f59c23;
+
+        --brand-green-050: #f3fff3;
+        --brand-green-100: #bbc8b8;
+        --brand-green-200: #c1d2c0;
+        --brand-green-300: #7c8c7c;
+        --brand-green-400: #8fa190;
+        --brand-green-500: #506050;
+
+        --brand-teal-100: #00aba9;
+        --brand-teal-200: #4ac1c5;
+        --brand-teal-300: #007c7b;
+        --brand-teal-400: #009095;
+        --brand-teal-500: #004e4b;
+        --brand-teal-600: #006367;
+
+        --func-success-300: #4ef2bc;
+        --func-success-400: #00e0a8;
+        --func-success-500: #00dc8c;
+        --func-success-600: #00c075;
+        --func-success-700: #009c64;
+        --func-error: #ff0000;
+
+        --ghost-100: #d3d5d5;
+        --ghost-300: #bdbebe;
+        --ghost-400: #939393;
+        --ghost-500: #858686;
+        --ghost-600: #767777;
+        --ghost-700: #444647;
+
+        --sys-paper-light: #ffffff;
+        --sys-ink-light: #000000;
+        --sys-elev-light: #e7e6e6;
+        --sys-handle-light: #edefee;
+        --sys-bg-dark: #1b1b1b;
+        --sys-elev-dark: #333333;
+        --sys-ink-dark: #ffffff;
+      }
+
+      /* ===== Themes Semantic Variables with Hover and Info Colors ===== */
+      :root,
+      :root[data-theme="light"] {
+        --color-bg: var(--sys-paper-light);
+        --color-elev: var(--sys-elev-light);
+        --color-text: var(--sys-ink-light);
+        --color-muted-text: var(--ghost-600);
+
+        --color-primary: var(--brand-orange-700);
+        --color-primary-contrast: var(--brand-white);
+        --color-secondary: var(--brand-teal-300);
+        --color-secondary-contrast: var(--brand-white);
+        --color-hover: var(--brand-green-300);
+        --color-info: var(--brand-teal-300);
+
+        --color-success: var(--func-success-600);
+        --color-error: var(--func-error);
+
+        --color-border: var(--ghost-400);
+        --gradient-brand: linear-gradient(
+          90deg,
+          var(--brand-gradient-1) 0%,
+          var(--brand-gradient-2) 50%,
+          var(--brand-gradient-3) 100%
+        );
+      }
+
+      :root[data-theme="dark"] {
+        --color-bg: var(--sys-bg-dark);
+        --color-elev: var(--sys-elev-dark);
+        --color-text: var(--sys-ink-dark);
+        --color-muted-text: var(--ghost-300);
+
+        --color-primary: var(--brand-orange-600);
+        --color-primary-contrast: var(--brand-black);
+        --color-secondary: var(--brand-teal-200);
+        --color-secondary-contrast: var(--brand-black);
+        --color-hover: var(--func-error); /* Red hover for dark theme */
+        --color-info: var(--brand-teal-200);
+
+        --color-success: var(--func-success-500);
+        --color-error: var(--func-error);
+
+        --color-border: var(--ghost-700);
+        --gradient-brand: linear-gradient(
+          90deg,
+          var(--brand-orange-600) 0%,
+          var(--brand-orange-500) 100%
+        );
+      }
+
+      :root[data-theme="orange"] {
+        --color-bg: var(--brand-white);
+        --color-elev: var(--brand-white);
+        --color-text: var(--brand-black);
+        --color-muted-text: var(--ghost-600);
+
+        --color-primary: var(--brand-orange-700);
+        --color-primary-contrast: var(--brand-white);
+        --color-secondary: var(--brand-orange-500);
+        --color-secondary-contrast: var(--brand-black);
+        --color-hover: var(--brand-teal-300);
+        --color-info: var(--brand-teal-300);
+
+        --color-success: var(--func-success-600);
+        --color-error: var(--func-error);
+
+        --color-border: var(--ghost-400);
+        --gradient-brand: linear-gradient(
+          135deg,
+          var(--brand-orange-700) 0%,
+          var(--brand-orange-600) 50%,
+          var(--brand-orange-500) 100%
+        );
+      }
+
+      :root[data-theme="teal"] {
+        --color-bg: var(--sys-paper-light);
+        --color-elev: var(--sys-elev-light);
+        --color-text: var(--sys-ink-light);
+        --color-muted-text: var(--ghost-600);
+
+        --color-primary: var(--brand-teal-400);
+        --color-primary-contrast: var(--brand-white);
+        --color-secondary: var(--brand-orange-600);
+        --color-secondary-contrast: var(--brand-white);
+        --color-hover: var(--brand-orange-500);
+        --color-info: var(--brand-teal-400);
+
+        --color-success: var(--func-success-400);
+        --color-error: var(--func-error);
+
+        --color-border: var(--ghost-400);
+        --gradient-brand: linear-gradient(
+          90deg,
+          var(--brand-teal-200) 0%,
+          var(--brand-teal-400) 50%,
+          var(--brand-teal-600) 100%
+        );
+      }
+
+      /* ===== Bootstrap Overrides Using Your Variables ===== */
+      body {
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        transition: background-color 1.2s ease, color 1.2s ease;
+      }
+
+      .navbar-default {
+        background-color: var(--color-primary);
+        border-color: var(--color-border);
+        color: var(--color-primary-contrast);
+        transition: background-color 1.2s ease, border-color 1.2s ease,
+          color 1.2s ease;
+      }
+      .navbar-default .navbar-nav > li > a {
+        color: var(--color-primary-contrast);
+        transition: color 1.2s ease;
+      }
+      .navbar-default .navbar-nav > li > a:hover,
+      .navbar-default .navbar-nav > li > a:focus {
+        background-color: var(--color-hover);
+        color: var(--color-primary-contrast);
+      }
+      .navbar-default .navbar-brand {
+        color: var(--color-primary-contrast);
+        transition: color 1.2s ease;
+      }
+
+      .sidebar {
+        background-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+        border-right: 1px solid var(--color-border);
+        min-height: 100vh;
+        transition: background-color 1.2s ease, color 1.2s ease,
+          border-color 1.2s ease;
+      }
+      .sidebar .nav > li > a {
+        color: var(--color-primary-contrast);
+        transition: color 1.2s ease;
+      }
+      .sidebar .nav > li > a:hover {
+        background-color: var(--color-hover);
+        color: var(--color-primary-contrast);
+      }
+
+      .panel {
+        background-color: var(--color-bg);
+        border-color: var(--color-border);
+        color: var(--color-text);
+        transition: background-color 1.2s ease, border-color 1.2s ease,
+          color 1.2s ease;
+      }
+      .panel-default > .panel-heading {
+        background-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+        border-color: var(--color-border);
+        transition: background-color 1.2s ease, color 1.2s ease,
+          border-color 1.2s ease;
+      }
+      .panel-body {
+        background-color: var(--color-elev);
+        transition: background-color 1.2s ease;
+      }
+
+      .dropdown-menu {
+        background-color: var(--color-elev);
+        border-color: var(--color-border);
+        transition: background-color 1.2s ease, border-color 1.2s ease;
+      }
+      .dropdown-menu > li > a {
+        color: var(--color-text);
+        transition: color 1.2s ease;
+      }
+      .dropdown-menu > li > a:hover,
+      .dropdown-menu > li > a:focus {
+        background-color: var(--color-hover);
+        color: var(--color-text);
+      }
+
+      .btn {
+        border-color: var(--color-border);
+        color: var(--color-text);
+        transition: background-color 1.2s ease, border-color 1.2s ease,
+          color 1.2s ease;
+      }
+      .btn-primary {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+      }
+      .btn-primary:hover,
+      .btn-primary:focus {
+        background-color: var(--color-secondary);
+        border-color: var(--color-secondary);
+        color: var(--color-secondary-contrast);
+      }
+      .btn-default {
+        background-color: var(--color-elev);
+        color: var(--color-text);
+      }
+      .btn-default:hover {
+        background-color: var(--color-hover);
+        color: var(--color-text);
+      }
+      .btn-success {
+        background-color: var(--color-success);
+        border-color: var(--color-success);
+        color: var(--color-bg);
+      }
+      .btn-danger {
+        background-color: var(--color-error);
+        border-color: var(--color-error);
+        color: var(--color-bg);
+      }
+
+      .tooltip {
+        opacity: 1;
+      }
+      .tooltip-inner {
+        background-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+        transition: background-color 1.2s ease, color 1.2s ease;
+      }
+      .tooltip.top .tooltip-arrow {
+        border-top-color: var(--color-primary);
+        transition: border-color 1.2s ease;
+      }
+      .tooltip.bottom .tooltip-arrow {
+        border-bottom-color: var(--color-primary);
+        transition: border-color 1.2s ease;
+      }
+      .tooltip.left .tooltip-arrow {
+        border-left-color: var(--color-primary);
+        transition: border-color 1.2s ease;
+      }
+      .tooltip.right .tooltip-arrow {
+        border-right-color: var(--color-primary);
+        transition: border-color 1.2s ease;
+      }
+
+      .alert {
+        background-color: var(--color-elev);
+        border-color: var(--color-border);
+        color: var(--color-text);
+        transition: background-color 1.2s ease, border-color 1.2s ease,
+          color 1.2s ease;
+      }
+      .alert-success {
+        background-color: var(--color-success);
+        border-color: var(--color-success);
+        color: var(--color-bg);
+      }
+      .alert-danger {
+        background-color: var(--color-error);
+        border-color: var(--color-error);
+        color: var(--color-bg);
+      }
+      .alert-warning {
+        background-color: var(--brand-orange-500);
+        border-color: var(--brand-orange-500);
+        color: var(--brand-black);
+      }
+      .alert-info {
+        background-color: var(--color-info);
+        border-color: var(--color-info);
+        color: var(--color-secondary-contrast);
+      }
+
+      .theme-switcher {
+        margin: 10px 0;
+        text-align: center;
+      }
+
+      /* Theme Icon */
+      .theme-icon {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform-style: preserve-3d;
+        transform-origin: center;
+        font-size: 3rem;
+        color: var(--color-primary);
+        z-index: 1050;
+        pointer-events: none;
+        user-select: none;
+        display: none;
+        backface-visibility: hidden;
+      }
+
+      @keyframes flipInAnimation {
+        0% {
+          transform: translate(-50%, -50%) rotateY(90deg);
+          opacity: 0;
+        }
+        50% {
+          transform: translate(-50%, -50%) rotateY(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) rotateY(0deg);
+          opacity: 1;
+        }
+      }
+
+      .theme-icon.flip-in {
+        display: block;
+        animation: flipInAnimation 1.2s ease forwards; /* Increased duration */
+      }
+
+      :root[data-theme="light"] .theme-icon::before {
+        content: "\f185"; /* FontAwesome sun */
+        font-family: FontAwesome;
+      }
+      :root[data-theme="dark"] .theme-icon::before {
+        content: "\f186"; /* FontAwesome moon */
+        font-family: FontAwesome;
+      }
+      :root[data-theme="orange"] .theme-icon::before {
+        content: "\f1fd"; /* FontAwesome fire */
+        font-family: FontAwesome;
+      }
+      :root[data-theme="teal"] .theme-icon::before {
+        content: "\f043"; /* FontAwesome tint */
+        font-family: FontAwesome;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Theme Icon -->
+    <div class="theme-icon" aria-hidden="true"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button
+            type="button"
+            class="navbar-toggle collapsed"
+            data-toggle="collapse"
+            data-target="#navbar-collapse"
+            aria-expanded="false"
+          >
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Brand</a>
+        </div>
+
+        <div class="collapse navbar-collapse" id="navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="#">Home</a></li>
+            <li class="dropdown">
+              <a
+                href="#"
+                class="dropdown-toggle"
+                data-toggle="dropdown"
+                role="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                >Dropdown <span class="caret"></span
+              ></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">Action</a></li>
+                <li><a href="#">Another action</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 sidebar">
+          <ul class="nav nav-pills nav-stacked">
+            <li><a href="#">Sidebar Item 1</a></li>
+            <li><a href="#">Sidebar Item 2</a></li>
+            <li><a href="#">Sidebar Item 3</a></li>
+          </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+          <!-- Theme Switcher -->
+          <div class="theme-switcher">
+            <button class="btn btn-default" data-theme="light">
+              Light Theme
+            </button>
+            <button class="btn btn-default" data-theme="dark">
+              Dark Theme
+            </button>
+            <button class="btn btn-default" data-theme="orange">
+              Orange Theme
+            </button>
+            <button class="btn btn-default" data-theme="teal">
+              Teal Theme
+            </button>
+          </div>
+
+          <!-- Panels -->
+          <div class="panel panel-default">
+            <div class="panel-heading">Panel Heading</div>
+            <div class="panel-body">
+              <p>This is a panel body with some content.</p>
+              <button
+                class="btn btn-primary"
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Primary Button Tooltip"
+              >
+                Primary Button
+              </button>
+              <button
+                class="btn btn-default"
+                data-toggle="tooltip"
+                data-placement="bottom"
+                title="Default Button Tooltip"
+              >
+                Default Button
+              </button>
+              <button class="btn btn-success">Success Button</button>
+              <button class="btn btn-danger">Danger Button</button>
+            </div>
+          </div>
+
+          <!-- Alerts -->
+          <div class="alert alert-success">This is a success alert!</div>
+          <div class="alert alert-danger">This is a danger alert!</div>
+          <div class="alert alert-warning">This is a warning alert!</div>
+          <div class="alert alert-info">This is an info alert!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap 3.4.1 JS and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+
+        const themeIcon = document.querySelector(".theme-icon");
+        const container = document.documentElement;
+
+        document.querySelectorAll(".theme-switcher button").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const selectedTheme = btn.getAttribute("data-theme");
+
+            // Remove previous animation class
+            themeIcon.classList.remove("flip-in");
+
+            // Immediately set the theme attribute for icon color and page styles
+            container.setAttribute("data-theme", selectedTheme);
+
+            // Show icon and restart animation
+            themeIcon.style.display = "block";
+            void themeIcon.offsetWidth; // Trigger reflow
+            themeIcon.classList.add("flip-in");
+
+            // Hide main content during animation to avoid flicker
+            document.querySelector(".container-fluid").style.visibility =
+              "hidden";
+
+            // After animation duration, hide icon and show content again
+            setTimeout(() => {
+              themeIcon.style.display = "none";
+              document.querySelector(".container-fluid").style.visibility =
+                "visible";
+            }, 1200); // Matches new animation duration
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
